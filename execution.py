@@ -9,7 +9,14 @@ import time
 from math import sqrt
 from optparse import OptionParser
 
+
 """
+Author: David Schanzenbach
+Original scripts by: Yvonne Chan
+
+Original Version: 20131224
+- Should work with python 2.4 and any newer python 2.x release
+
 Assumptions: 
 - Assume the population count is always 1
 - Assume only 1 iteration in BayeSSC per run
@@ -20,124 +27,98 @@ BAYESSC_PATH = ""
 RETRIES = 10
 
 
-class ObservationData():
-		def __init__(self, data = None):
-				self.label = ""
-				self.nsam = 0.0
-				self.nsites = 0.0
-				self.tstv = 0.0
-				self.gamma = 0.0
-				#self.mutlow = 0.0
-				#self.muthigh = 0.0
-				self.gen = 0.0
-				self.locuslow = 0.0
-				self.locushigh = 0.0
-				self.neLow = 0.0
-				self.neHigh = 0.0
-				self.seg = 0.0
-				self.nucdiv = 0.0
-				self.haps = 0.0
-				self.hapdiv = 0.0
-				self.pair = 0.0
-				self.tajd = 0.0
-				self.fusf = 0.0
-				self.exphet = 0.0
-			
-				self.ne = 0.0
-				self.expan = 0.0
-				self.mu = 0.0
-				self.time = 0.0
-				if data != None:
-						self.fill(data)
+class ObservationData(object):
+    # default column order
+    columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet', 'mutlow', 'muthigh']
+    def __init__(self, data = None, useLoci = True):
+        self.label = ""
+        self.nsam = 0.0
+        self.nsites = 0.0
+        self.tstv = 0.0
+        self.gamma = 0.0
+        self.mutlow = 0.0
+        self.muthigh = 0.0
+        self.gen = 0.0
+        self.locuslow = 0.0
+        self.locushigh = 0.0
+        self.neLow = 0.0
+        self.neHigh = 0.0
+        self.seg = 0.0
+        self.nucdiv = 0.0
+        self.haps = 0.0
+        self.hapdiv = 0.0
+        self.pair = 0.0
+        self.tajd = 0.0
+        self.fusf = 0.0
+        self.exphet = 0.0
+        self.useloci = useLoci
 
-							
-		#label, nsam, nsite, 
-		#Num_label,No_Samples,No_BasePairs,per_transitions,gamma,Mutlow,Muthigh,gen,locuslow ,locushigh,Nelow,Nehigh,SegregatingSites,nucdiv,nhap,hapdiv,pair,TajD,FuF,nucdiv,ExpHet
+        if data != None:
+            self.fill(data)
 
-		def fill(self, data):
-				"""
-				- obsData is a single line in the Observation file
-				- statsdata is the data generated in the *_stat.csv from BayeSSC
-				- time is a random int, between 2 user defined values.
-				"""
-				self.label = data[0]
-				self.nsam = data[1]
-				self.nsites = data[2]
-				self.tstv = data[3]
-				self.gamma = data[4]
-				self.gen = data[5]
-				self.locuslow = data[6]
-				self.locushigh = data[7]
-				self.neLow = data[8]
-				self.neHigh = data[9]
-				self.seg = data[10]
-				self.nucdiv = data[11]
-				self.haps = data[12]
-				self.hapdiv = data[13]
-				self.pair = data[14]
-				self.tajd = data[15]
-				self.fusf = data[16]
-				self.exphet = data[27]
-			
-				#self.mutlow = data[5]
-				#self.muthigh = data[6]
-				#self.gen = data[7]
-				#self.locushigh = data[8]
-				#self.locuslow = data[9]
-				#self.neLow = data[10]
-				#self.neHigh = data[11]
-				#self.seg = data[12]
-				#self.nucdiv = data[13]
-				#self.haps = data[14]
-				#self.hapdiv = data[15]
-				#self.pair = data[16]
-				#self.tajd = data[17]
-				#self.fusf = data[18]
-				#self.exphet = data[20]
+    def fill(self, data):
+        """
+        - obsData is a single line in the Observation file
+        - statsdata is the data generated in the *_stat.csv from BayeSSC
+        - time is a random int, between 2 user defined values.
+        """
+        #columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet']
 
+        self.label = data['species']
+        self.nsam = data['nsam']
+        self.nsites = data['nsites']
+        self.tstv = data['tstv']
+        self.gamma = data['gamma']
+        self.gen = data['gen']
+        self.locuslow = data['locuslow']
+        self.locushigh = data['locushigh']
+        self.mutlow = data['mutlow']
+        self.muthigh = data['muthigh']
+        self.neLow = data['nelow']
+        self.neHigh = data['nehigh']
+        self.seg = data['segsites']
+        self.nucdiv = data['nucdiv']
+        self.haps = data['haptypes']
+        self.hapdiv = data['hapdiver']
+        self.pair = data['pairdiffs']
+        self.tajd = data['tajimasd']
+        self.fusf = data['f*']
+        self.exphet = data['exphet']
 
+    def getPopRange(self):
+        return (float(self.neLow), float(self.neHigh))
+        
+    def getMutationRange(self):
+        if self.useloci:
+            return (float(self.locuslow), float(self.locushigh))
+        else:
+            return (float(self.mutlow), float(self.muthigh))
 
-		def __str__(self):
-    
-				return ",".join(map(str, [self.label, self.nsam, self.nsites, self.tstv, self.gamma, self.gen, self.locushigh, 
-				self.locuslow, self.neLow, self.neHigh, self.seg, self.nucdiv, self.haps, self.hapdiv, self.pair, self.tajd, self.fusf, 
-				self.exphet, self.ne, self.expan, self.mu, self.time]) )
-				#return ",".join(map(str, [self.label, self.nsam, self.nsites, self.tstv, self.gamma, self.mutlow, self.muthigh, self.gen, self.locushigh, 
-				#self.locuslow, self.neLow, self.neHigh, self.seg, self.nucdiv, self.haps, self.hapdiv, self.pair, self.tajd, self.fusf, 
-				#self.exphet, self.ne, self.expan, self.mu, self.time]) )
+    def __str__(self):
+        return ",".join(map(str, [self.label, self.nsam, self.nsites,
+                                  self.tstv, self.gamma, self.gen, self.locushigh, 
+                                  self.locuslow, self.neLow, self.neHigh, self.seg,
+                                  self.nucdiv, self.haps, self.hapdiv, self.pair, 
+                                  self.tajd, self.fusf, self.exphet, self.mutlow, self.muthigh]) )
 
 
 class BayeSSCData(object):
     """
     -- mapping for bayssc output to BayeSSCData
-    species.txt, obs[0]
-    nsam.txt, obs[1]
-    nsites.txt, obs[2]
-    GROUP 0,
-    Haptypes, haps
-    PrivHaps,
-    SegSites, seg
-    PairDiffs, pair
-    HapDiver, hapdiv
-    NucltdDiv, nucdiv
-    TajimasD, tajd
-    F*, fusf
-    MismatDist,
-    COMBINED,
-    Haptypes,
-    PrivHaps,
-    SegSites,
-    PairDiffs,
-    HapDiver,
-    NucltdDiv,
-    TajimasD,
-    F*,
-    MismatDist,
-    MRCA,
-    PRIORS,
-    Deme Size 0, Ne
-    Event Size 0, expan
-    Mutation Rate 0, mu
+    species.txt, obs[0]    nsam.txt, obs[1]
+    nsites.txt, obs[2]    GROUP 0,
+    Haptypes, haps    PrivHaps,
+    SegSites, seg    PairDiffs, pair
+    HapDiver, hapdiv    NucltdDiv, nucdiv
+    TajimasD, tajd    F*, fusf
+    MismatDist,    COMBINED,
+    Haptypes,    PrivHaps,
+    SegSites,    PairDiffs,
+    HapDiver,    NucltdDiv,
+    TajimasD,    F*,
+    MismatDist,    MRCA,
+    PRIORS,    Deme Size 0, Ne
+    Event Size 0, expan    Mutation Rate 0, mu
     number.txt(randint) time
     """
 
@@ -191,9 +172,12 @@ class BayeSSCData(object):
                          self.time]))
             
 
+
 class RunningStat(object):
     #http://www.johndcook.com/skewness_kurtosis.html
     # original class was written in c++.  This is a conversion to python
+    # follows the online_kurtosis function describe at wikipedia:
+    # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Higher-order_statistics
     def __init__(self):
         self.Clear()
 
@@ -217,7 +201,7 @@ class RunningStat(object):
         delta_n2 = delta_n * delta_n
         term1 = delta * delta_n * n1
         self.M1 += delta_n;
-        self.M4 += term1 * delta_n2 * (self.n*self.n - 3*self.n + 3) + 6 * delta_n2 * self.M2 - 4 * delta_n * self.M3;
+        self.M4 += term1 * delta_n2 * (self.n * self.n - 3 * self.n + 3) + 6 * delta_n2 * self.M2 - 4 * delta_n * self.M3;
         self.M3 += term1 * delta_n * (self.n - 2) - 3 * delta_n * self.M2;
         self.M2 += term1;
 
@@ -240,26 +224,49 @@ class RunningStat(object):
         return float(self.n) * self.M4 / (self.M2 * self.M2) - 3.0;
     
     def collectStats(self):
-	# division by zero can occur when dealing with times (model 0 and model 1)
-	# force the division by zero to result in all stats being 0. for our sanity!
-        values = [0,0,0,0]
+        # division by zero can occur when dealing with times (model 0 and model 1)
+        # force the division by zero to result in all stats being 0. for our sanity!
+        values = ["0","0","0","0"]
         try:
-	   values[0] = self.Mean()
-	except ZeroDivisionError:
+            values[0] = "%f"%(self.Mean())
+        except ZeroDivisionError:
             pass
         try:
-	    values[1] = self.Variance()
-	except ZeroDivisionError:
+            values[1] = "%f"%(self.Variance())
+        except ZeroDivisionError:
             pass
         try:
-            values[2] =  self.Skewness()
-	except ZeroDivisionError:
+            values[2] = "%f"%(self.Skewness())
+        except ZeroDivisionError:
             pass
-	try:
-	    values[3] =  self.Kurtosis()
-	except ZeroDivisionError:
+        try:
+            values[3] = "%f"%(self.Kurtosis())
+        except ZeroDivisionError:
             pass
         return values
+                                                                                                                                                   
+#     def collectStats(self):
+# 	# division by zero can occur when dealing with times (model 0 and model 1)
+# 	# force the division by zero to result in all stats being 0. for our sanity!
+#         values = [0,0,0,0]
+#         try:
+# 	   values[0] = self.Mean()
+# 	except ZeroDivisionError:
+#             pass
+#         try:
+# 	    values[1] = self.Variance()
+# 	except ZeroDivisionError:
+#             pass
+#         try:
+#             values[2] = self.Skewness()
+# 	except ZeroDivisionError:
+#             pass
+# 	try:
+# 	    values[3] = self.Kurtosis()
+# 	except ZeroDivisionError:
+#             pass
+#         return values
+
    
 def mergeRunningStats(a, b):
     """
@@ -380,8 +387,8 @@ class ParFile(object):
 	    ele.append(buf)
 	return " ".join([e.replace(" ", "") for e in ele])
 
-    def setPopulation(self, distro, low, high):
-	self.popsize = ["{%s:%s,%s}"%(distro, low, high) for r in self.popsize  ]
+    def setPopulation(self, distro, poprng):
+	self.popsize = ["{%s:%f,%f}"%(distro, poprng[0], poprng[1]) for r in self.popsize  ]
     
     def setTime(self, time):
 	npop = []
@@ -391,8 +398,8 @@ class ParFile(object):
 	    npop.append(" ".join(ele))
 	self.events = npop        
 
-    def setLociRate(self, distro, low, high):
-	self.rate = "{%s:%s,%s}"%(distro, low, high)
+    def setLociRate(self, distro, locrng):
+	self.rate = "{%s:%f,%f}"%(distro, locrng[0], locrng[1])
 
     def setLoci(self, lociCnt):
 	self.loci = lociCnt
@@ -402,12 +409,12 @@ class ParFile(object):
 
     def setTSTV(self, tstv):
 	v = self.type.split()
-	v[1] = tstv
+	v[1] = "%f"%(float(tstv))
 	self.type = " ".join(v)
     
     def setgamma(self, gamma):
 	v = self.gamma.split()
-	v[0] = gamma
+	v[0] = "%f"%(float(gamma))
 	self.gamma = " ".join(v)
     
     def matrixStr(self):
@@ -458,7 +465,7 @@ def is_exe(fpath):
 def which(program):
     # http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
     """
-    Validate taht the user provided path, does infact exist for BayeSSC
+    Validate that the user provided path, does infact exist for BayeSSC
     """
     fpath, fname = os.path.split(program)
     if fpath:
@@ -514,13 +521,18 @@ def parseBayeSSCOut(filePath):
     return datadict	
 
 
-def parseObs(obs):
+def parseObs(obs, useLoci):
     """
     The observation file is a tab delimited file. This can easily be
     split and stored in memory.
+    default ordering
+    >species,nsam,nsites,tstv,gamma,gen,locuslow,locushigh,Nelow,Nehigh,SegSites,nucdiv,Haptypes,HapDiver,PairDiffs,TajimasD,F*,ExpHet
+    
     """
+    
     obsf = open(obs)
-    obsl = [ObservationData(l.strip().split()) for l in obsf]
+    ObservationData.columns = obsf.next().strip().lower().split()
+    obsl = [ObservationData( dict(izip(ObservationData.columns, l.strip().split())), useLoci ) for l in obsf]
     obsf.close()
     return obsl
 
@@ -549,14 +561,15 @@ def prepareBayeSSC(obs, parData, time, LPType, PopType):
     """
     chngtime = str( int( time / float(obs.gen)) )
     par = copy.copy(parData)
-    par.setPopulation(PopType, obs.neLow, obs.neHigh)
+    par.setPopulation(PopType, obs.getPopRange())
     par.setTime(chngtime)
-    par.setLociRate(LPType, obs.locuslow, obs.locushigh)
+    par.setLociRate(LPType, obs.getMutationRange())
     par.setgamma(obs.gamma)
     par.setSampleSize(obs.nsam)
     par.setLoci(obs.nsites)
     par.setTSTV(obs.tstv)
     return chngtime, par
+
 
 def exceuteBateSSCWIthRetry(obs, chngtime, par, workdir):
     global RETRIES
@@ -612,11 +625,10 @@ def generateRANDSpecs(origParName, parData, observations, timerange, workdir = "
     return rows
 
 
-def computeStats(congruentCnt, total, conspecData, randomData):
+def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
     """
     Using the collect data from multipl repeats, compute some statistics on particular data columns
     """
-    #time = RunningStat()	
     expan = RunningStat()
     mu = RunningStat()
     Ne = RunningStat()	
@@ -627,41 +639,48 @@ def computeStats(congruentCnt, total, conspecData, randomData):
     nucdiv = RunningStat()	
     pair  = RunningStat()	
     tajd = RunningStat()	
-    fusf = RunningStat()	
+    fusf = RunningStat()
+    overalltime = RunningStat()
+    if conspecData or randomData:
+        for row in conspecData:
+            expan.Push(row.expan)
+            mu.Push(row.mu)
+            Ne.Push(row.ne)
+            contime.Push(row.time)
+            haps.Push(row.haps)
+            hapdiv.Push(row.hapdiv)
+            nucdiv.Push(row.nucdiv)
+            pair.Push(row.pair)
+            tajd.Push(row.tajd)
+            fusf.Push(row.fusf)
+        for row in randomData:
+            expan.Push(row.expan)
+            mu.Push(row.mu)
+            Ne.Push(row.ne)
+            rndtime.Push(row.time)
+            haps.Push(row.haps)
+            hapdiv.Push(row.hapdiv)
+            nucdiv.Push(row.nucdiv)
+            pair.Push(row.pair)
+            tajd.Push(row.tajd)
+            fusf.Push(row.fusf)
 
-    for row in conspecData:
-	expan.Push(row.expan)
-	mu.Push(row.mu)
-	Ne.Push(row.ne)
-	#time.Push(row.time)
-	contime.Push(row.time)
-	haps.Push(row.haps)
-	hapdiv.Push(row.hapdiv)
-	nucdiv.Push(row.nucdiv)
-	pair.Push(row.pair)
-	tajd.Push(row.tajd)
-	fusf.Push(row.fusf)
+        overalltime = mergeRunningStats(rndtime, contime)
+        stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Variance() / overalltime.Mean()]             
+    else:
+        # compute the stats for the observation file.  Computer only those that are identical to the hyperstats output
+        for row in obsData:
+            haps.Push(row.haps)
+            hapdiv.Push(row.hapdiv)
+            nucdiv.Push(row.nucdiv)
+            pair.Push(row.pair)
+            tajd.Push(row.tajd)
+            fusf.Push(row.fusf)
 
-    for row in randomData:
-	expan.Push(row.expan)
-	mu.Push(row.mu)
-	Ne.Push(row.ne)
-	#time.Push(row.time)
-	rndtime.Push(row.time)
-	haps.Push(row.haps)
-	hapdiv.Push(row.hapdiv)
-	nucdiv.Push(row.nucdiv)
-	pair.Push(row.pair)
-	tajd.Push(row.tajd)
-	fusf.Push(row.fusf)
-
-    overalltime = mergeRunningStats(rndtime, contime)
-    stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Variance() / overalltime.Mean()] 
-
+        stats = [0, 0, 0, 0]
     stats.extend(contime.collectStats())
     stats.extend(rndtime.collectStats())
     stats.extend(overalltime.collectStats())
-    #stats.extend(time.collectStats())
     stats.extend(Ne.collectStats())
     stats.extend(expan.collectStats())
     stats.extend(mu.collectStats())
@@ -702,7 +721,39 @@ def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, ob
     o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations_congruent_appearance.csv"%(con_species, obsCnt, repeats)), "w")
     o.write("\n".join( [",".join(map(str, itm)) for itm in counts.iteritems() ] ) )
     o.close()
-	
+
+
+def main():
+    """
+    Main loop of the appliocation
+    drives how the program executes (only 1 model, or multiple models).
+    """
+    options = commandlineArgs()
+    par = ParFile(options.par)
+    observations = parseObs(options.obs, options.useLoci)
+    obsCnt = len(observations)
+    fname = "hyperstats_-_%s.txt"
+    if options.model == None:
+	fname = fname%("models_0-%s_-_%s_iterations"%(obsCnt, options.repeats))
+    else:
+	fname = fname%("model%s_of_%s"%(options.model, obsCnt))
+
+    obsStats = open(os.path.join(options.outdir,"hyperstats_-_observations.txt"), "w")
+    index = "%s_%s_%s_%s_%s"%(options.uid, 0, 0, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+    obsStats.write( "%s,%s\n"%(index, ",".join( computeStats(0,obsCnt, obsData = observations) )) )
+    obsStats.close()
+    
+    hyperstats = open(os.path.join(options.outdir, fname), "w")
+    counts = dict([ (obs.label, 0) for obs in observations])
+    
+    splitter = ObservationSplitter("uniform")
+    if options.model == None:
+	for con_species in xrange(obsCnt + 1):
+	    for k in counts:
+		counts[k] = 0
+	    performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, con_species, obsCnt, counts)
+    else:
+	performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, options.model, obsCnt, counts)
 
 	
 def commandlineArgs():
@@ -720,7 +771,7 @@ def commandlineArgs():
     parser.add_option("-o", "--outdir", dest = "outdir", help = "Directory to generate output in (will create missing folders) [default: %default]", action = "store", type = "string", metavar = "PATH", default = os.getcwd())
     parser.add_option("-t", "--timerange", dest= "trange", help = "The range of values to select the time from (Integers). Example: 1000:20000  [required]", action = "store", type = "string", metavar ="RANGE")
     parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
-    
+    parser.add_option("", "--mutate", action="store_false", dest="useLoci", default=True, help="When set uses the mutlow and muthigh columns instead of locilow/locihigh for subsitution into the par file")
     (options, args) = parser.parse_args()    
     
     if not options.par:
@@ -766,32 +817,6 @@ def commandlineArgs():
 	parser.error("Time range does not consist of valid integers")
     return options
 
-
-def main():
-    """
-    Main loop of the appliocation
-    drives how the program executes (only 1 model, or multiple models).
-    """
-    options = commandlineArgs()
-    par = ParFile(options.par)
-    observations = parseObs(options.obs)
-    obsCnt = len(observations)
-    fname = "hyperstats_-_%s.txt"
-    if options.model == None:
-	fname = fname%("models_0-%s_-_%s_iterations"%(obsCnt, options.repeats))
-    else:
-	fname = fname%("model%s_of_%s"%(options.model, obsCnt))
-    hyperstats = open(os.path.join(options.outdir, fname), "w")
-    counts = dict([ (obs.label, 0) for obs in observations])
-    
-    splitter = ObservationSplitter("uniform")
-    if options.model == None:
-	for con_species in xrange(obsCnt + 1):
-	    for k in counts:
-		counts[k] = 0
-	    performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, con_species, obsCnt, counts)
-    else:
-	performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, options.model, obsCnt, counts)
 
 
 if __name__ == "__main__":
