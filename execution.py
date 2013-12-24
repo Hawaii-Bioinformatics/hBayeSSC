@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from itertools import izip
 import sys
 import os
 import copy
@@ -20,90 +21,90 @@ RETRIES = 10
 
 
 class ObservationData():
+		def __init__(self, data = None):
+				self.label = ""
+				self.nsam = 0.0
+				self.nsites = 0.0
+				self.tstv = 0.0
+				self.gamma = 0.0
+				#self.mutlow = 0.0
+				#self.muthigh = 0.0
+				self.gen = 0.0
+				self.locuslow = 0.0
+				self.locushigh = 0.0
+				self.neLow = 0.0
+				self.neHigh = 0.0
+				self.seg = 0.0
+				self.nucdiv = 0.0
+				self.haps = 0.0
+				self.hapdiv = 0.0
+				self.pair = 0.0
+				self.tajd = 0.0
+				self.fusf = 0.0
+				self.exphet = 0.0
+			
+				self.ne = 0.0
+				self.expan = 0.0
+				self.mu = 0.0
+				self.time = 0.0
+				if data != None:
+						self.fill(data)
 
-	def __init__(self, data = None):
-		self.label = ""
-		self.nsam = 0.0
-		self.nsites = 0.0
-		self.tstv = 0.0
-		self.gamma = 0.0
-		#self.mutlow = 0.0
-		#self.muthigh = 0.0
-		self.gen = 0.0
-		self.locuslow = 0.0
-		self.locushigh = 0.0
-		self.neLow = 0.0
-		self.neHigh = 0.0
-		self.seg = 0.0
-		self.nucdiv = 0.0
-		self.haps = 0.0
-		self.hapdiv = 0.0
-		self.pair = 0.0
-		self.tajd = 0.0
-		self.fusf = 0.0
-		self.exphet = 0.0
+							
+		#label, nsam, nsite, 
+		#Num_label,No_Samples,No_BasePairs,per_transitions,gamma,Mutlow,Muthigh,gen,locuslow ,locushigh,Nelow,Nehigh,SegregatingSites,nucdiv,nhap,hapdiv,pair,TajD,FuF,nucdiv,ExpHet
 
-		self.ne = 0.0
-		self.expan = 0.0
-		self.mu = 0.0
-		self.time = 0.0
-		if data != None:
-			self.fill(data)
-
-#label, nsam, nsite, 
-#Num_label,No_Samples,No_BasePairs,per_transitions,gamma,Mutlow,Muthigh,gen,locuslow ,locushigh,Nelow,Nehigh,SegregatingSites,nucdiv,nhap,hapdiv,pair,TajD,FuF,nucdiv,ExpHet
-
-    def fill(self, data):
-        """
-        - obsData is a single line in the Observation file
-        - statsdata is the data generated in the *_stat.csv from BayeSSC
-        - time is a random int, between 2 user defined values.
-	"""
-	self.label = data[0]
-	self.nsam = data[1]
-	self.nsites = data[2]
-	self.tstv = data[3]
-	self.gamma = data[4]
-	self.gen = data[5]
-	self.locuslow = data[6]
-	self.locushigh = data[7]
-	self.neLow = data[8]
-	self.neHigh = data[9]
-	self.seg = data[10]
-	self.nucdiv = data[11]
-	self.haps = data[12]
-	self.hapdiv = data[13]
-	self.pair = data[14]
-	self.tajd = data[15]
-	self.fusf = data[16]
-	self.exphet = data[27]
-
-	#self.mutlow = data[5]
-	#self.muthigh = data[6]
-	#self.gen = data[7]
-	#self.locushigh = data[8]
-	#self.locuslow = data[9]
-	#self.neLow = data[10]
-	#self.neHigh = data[11]
-	#self.seg = data[12]
-	#self.nucdiv = data[13]
-	#self.haps = data[14]
-	#self.hapdiv = data[15]
-	#self.pair = data[16]
-	#self.tajd = data[17]
-	#self.fusf = data[18]
-	#self.exphet = data[20]
+		def fill(self, data):
+				"""
+				- obsData is a single line in the Observation file
+				- statsdata is the data generated in the *_stat.csv from BayeSSC
+				- time is a random int, between 2 user defined values.
+				"""
+				self.label = data[0]
+				self.nsam = data[1]
+				self.nsites = data[2]
+				self.tstv = data[3]
+				self.gamma = data[4]
+				self.gen = data[5]
+				self.locuslow = data[6]
+				self.locushigh = data[7]
+				self.neLow = data[8]
+				self.neHigh = data[9]
+				self.seg = data[10]
+				self.nucdiv = data[11]
+				self.haps = data[12]
+				self.hapdiv = data[13]
+				self.pair = data[14]
+				self.tajd = data[15]
+				self.fusf = data[16]
+				self.exphet = data[27]
+			
+				#self.mutlow = data[5]
+				#self.muthigh = data[6]
+				#self.gen = data[7]
+				#self.locushigh = data[8]
+				#self.locuslow = data[9]
+				#self.neLow = data[10]
+				#self.neHigh = data[11]
+				#self.seg = data[12]
+				#self.nucdiv = data[13]
+				#self.haps = data[14]
+				#self.hapdiv = data[15]
+				#self.pair = data[16]
+				#self.tajd = data[17]
+				#self.fusf = data[18]
+				#self.exphet = data[20]
 
 
 
-    def __str__(self):
+		def __str__(self):
     
-		return ",".join(map(str, [self.label, self.nsam, self.nsites, self.tstv, self.gamma, self.gen, self.locushigh, 
-		self.locuslow, self.neLow, self.neHigh, self.seg, self.nucdiv, self.haps, self.hapdiv, self.pair, self.tajd, self.fusf, 
-		self.exphet, self.ne, self.expan, self.mu, self.time]) )
-		#return ",".join(map(str, [self.label, self.nsam, self.nsites, self.tstv, self.gamma, self.mutlow, self.muthigh, self.gen, self.locushigh, 
-		#self.locuslow, self.neLow, self.neHigh, self.seg, self.nucdiv, self.haps, self.hapdiv, self.pair, self.tajd, self.fusf, 
-		#self.exphet, self.ne, self.expan, self.mu, self.time]) )
+				return ",".join(map(str, [self.label, self.nsam, self.nsites, self.tstv, self.gamma, self.gen, self.locushigh, 
+				self.locuslow, self.neLow, self.neHigh, self.seg, self.nucdiv, self.haps, self.hapdiv, self.pair, self.tajd, self.fusf, 
+				self.exphet, self.ne, self.expan, self.mu, self.time]) )
+				#return ",".join(map(str, [self.label, self.nsam, self.nsites, self.tstv, self.gamma, self.mutlow, self.muthigh, self.gen, self.locushigh, 
+				#self.locuslow, self.neLow, self.neHigh, self.seg, self.nucdiv, self.haps, self.hapdiv, self.pair, self.tajd, self.fusf, 
+				#self.exphet, self.ne, self.expan, self.mu, self.time]) )
 
 
 class BayeSSCData(object):
@@ -505,7 +506,7 @@ def parseBayeSSCOut(filePath):
     if len(d) != len(hdr):
 	raise BadBayesOutput("Data row is only partial")
     used = {}
-    for h, v in zip(hdr, d):
+    for h, v in izip(hdr, d):
 	if h not in used and v:
 	    datadict[h] = v
 	    used[h] = None	
