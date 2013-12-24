@@ -68,10 +68,15 @@ class DataMap:
         self.mu = 0.0
         self.time = 0.0
 
-    def fillFromBayeSSC(self, obs, time, statsData):
-        self.species = obs[0]
-        self.nsam = obs[1]
-        self.nsites = obs[2]
+    def fillFromBayeSSC(self, obsData, time, statsData):
+        """
+        - obsData is a single line in the Observation file
+        - statsdata is the data generated in the *_stat.csv from BayeSSC
+        - time is a random int, between 2 user defined values.
+        """
+        self.species = obsData[0]
+        self.nsam = obsData[1]
+        self.nsites = obsData[2]
         self.haps = statsData['haptypes']
         self.seg = statsData['segsites']
         self.pair = statsData['pairdiffs']
@@ -446,71 +451,6 @@ def runBayeSSC(obs, time, par, workdir = ".", parname = "tmp.par"):
     return dmap
 
 
-
-
-# def generateCONSpecs(origParName, parData, observations, counts, timerange, workdir = ".", LPType = "U", PopType = "U"):
-#     global RETRIES
-#     #congruent species
-#     rows = []
-#     time = float(generatedUniformTime(timerange) )   
-#     #time = float(generatedTime(origParName)) # this value is used for all conspec
-#     for obs in observations:
-# 	counts[obs[0]] += 1
-# 	attempts = 0
-# 	run = True
-# 	while run:
-# 	    chngtime = str( int( time / float(obs[5])) )
-# 	    par = copy.copy(parData)
-# 	    par.setPopulation(PopType,obs[8],obs[9])
-# 	    par.setTime(chngtime)
-# 	    par.setLociRate(LPType, obs[6], obs[7])
-# 	    par.setgamma(obs[4])
-# 	    par.setSampleSize(obs[1])
-# 	    par.setLoci(obs[2])
-# 	    par.setTSTV(obs[3])
-# 	    try:
-# 		row = runBayeSSC(obs, chngtime, par, workdir)
-# 		run = False
-# 		rows.append(row)
-# 	    except BadBayesOutput:
-# 		attempts += 1
-# 		if attempts >= RETRIES:
-# 		    raise BadBayesOutput("Attempted to run BayeSSC %s times, each run resulted in an output error.", RETRIES)
-# 		print >> sys.stderr, "Error running bayes.  Try again"
-#     return rows, counts
-
-
-# def generateRANDSpecs(origParName, parData, observations, timerange, workdir = ".", LPType = "U", PopType = "U"):
-#     global RETRIES
-#     rows = []
-#     for obs in observations:
-# 	attempts = 0
-# 	run = True
-# 	while run:
-#             # for each observation, get a new time
-# 	    time = float(generatedUniformTime(timerange) )
-# 	    #time = float(generatedTime(origParName))
-# 	    chngtime = str( int( time / float(obs[5])) )
-# 	    par = copy.copy(parData)
-# 	    par.setPopulation(PopType, obs[8], obs[9])
-# 	    par.setTime(chngtime)
-# 	    par.setLociRate(LPType, obs[6], obs[7])
-# 	    par.setgamma(obs[4])
-# 	    par.setSampleSize(obs[1])
-# 	    par.setLoci(obs[2])
-# 	    par.setTSTV(obs[3])
-# 	    try:
-# 		row = runBayeSSC(obs, chngtime, par, workdir)
-# 		run = False
-# 		rows.append(row)
-# 	    except BadBayesOutput:
-# 		attempts += 1
-# 		if attempts >= RETRIES:
-# 		    raise BadBayesOutput("Attempted to run BayeSSC %s times, each run resulted in an output error.", RETRIES)
-# 		print >> sys.stderr, "Error running bayes.  Try again"
-#     return rows
-
-
 def prepareBayeSSC(obs, parData, time, LPType, PopType):
     """
     populate the par object with the correct values.  Also modify the timestamp base on data from obs file
@@ -545,6 +485,9 @@ def exceuteBateSSCWIthRetry(obs, chngtime, par, workdir):
 
 
 def generateCONSpecs(origParName, parData, observations, counts, timerange, workdir = ".", LPType = "U", PopType = "U"):
+    """
+    Iterate all observations in the Congruent group and execute BayeSSC using that particular observation data
+    """
     #congruent species
     rows = []
     time = float(generatedUniformTime(timerange) )   
@@ -561,11 +504,13 @@ def generateCONSpecs(origParName, parData, observations, counts, timerange, work
 
 def generateRANDSpecs(origParName, parData, observations, timerange, workdir = ".", LPType = "U", PopType = "U"):
     """
-    Perform the Random portition.  For each observation, get us a new timestamp
+    Iterate all observations in the Random group and execute BayeSSC using that particular observation data.
+    A new timestamp is generated for each observations. 
     """
     rows = []
     for obs in observations:
         # for each observation, get a new time
+        # moved outside the while True, since it makes code consolidation easier
         time = float(generatedUniformTime(timerange) )
         chngtime, par = prepareBayeSSC(obs, parData, time, LPType, PopType)
         row = exceuteBateSSCWIthRetry(obs, chngtime, par, workdir)
@@ -620,7 +565,6 @@ def computeStats(congruentCnt, total, conspecData, randomData):
 	fusf.Push(row.fusf)
 
     overalltime = mergeRunningStats(rndtime, contime)
-
     stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Variance() / overalltime.Mean()] 
 
     stats.extend(contime.collectStats())
@@ -640,6 +584,11 @@ def computeStats(congruentCnt, total, conspecData, randomData):
     
 
 def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, observations, repeats, LPType, par, con_species, obsCnt, counts):
+    """
+    a model describes how many observations make up the congruent group.  for instance, model0, means we have no congruent observations.
+    This method is meant to contain all actions required to execute this script on a single model.  It will take that model, and
+    repeat the experiment multiple times, each time splitting the observations again and again.
+    """
     print >> sys.stderr , ".",
     o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations.csv"%(con_species, obsCnt, repeats)), "w")
     for trial in xrange(int(repeats)):
@@ -752,7 +701,6 @@ def main():
 	    performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, con_species, obsCnt, counts)
     else:
 	performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, options.model, obsCnt, counts)
-
 
 
 if __name__ == "__main__":
