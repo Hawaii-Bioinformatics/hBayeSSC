@@ -226,7 +226,9 @@ class RunningStat(object):
     def collectStats(self):
         # division by zero can occur when dealing with times (model 0 and model 1)
         # force the division by zero to result in all stats being 0. for our sanity!
-        values = ["0","0","0","0"]
+        values = [float('NaN'), float('NaN'), float('NaN'), float('NaN')]
+	if self.n == 0:
+	    return values
         try:
             values[0] = "%f"%(self.Mean())
         except ZeroDivisionError:
