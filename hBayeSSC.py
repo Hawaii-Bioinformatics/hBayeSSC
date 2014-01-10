@@ -672,7 +672,7 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
 
         overalltime = mergeRunningStats(rndtime, contime)
         stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Variance() / overalltime.Mean()]             
-    else:
+    elif obsData:
         # compute the stats for the observation file.  Computer only those that are identical to the hyperstats output
         for row in obsData:
             haps.Push(row.haps)
@@ -681,7 +681,7 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
             pair.Push(row.pair)
             tajd.Push(row.tajd)
             fusf.Push(row.fusf)
-
+		
         stats = [float('NaN'), float('NaN'), float('NaN'), float('NaN')]
     stats.extend(contime.collectStats())
     stats.extend(rndtime.collectStats())
