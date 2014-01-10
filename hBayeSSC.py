@@ -6,6 +6,7 @@ import os
 import copy
 import random
 import time
+import string
 from math import sqrt
 from optparse import OptionParser
 
@@ -29,15 +30,13 @@ RETRIES = 10
 
 class ObservationData(object):
     # default column order
-    columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet', 'mutlow', 'muthigh']
-    def __init__(self, data = None, useLoci = True):
+    columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet']
+    def __init__(self, data = None):
         self.label = ""
         self.nsam = 0.0
         self.nsites = 0.0
         self.tstv = 0.0
         self.gamma = 0.0
-        self.mutlow = 0.0
-        self.muthigh = 0.0
         self.gen = 0.0
         self.locuslow = 0.0
         self.locushigh = 0.0
@@ -51,7 +50,6 @@ class ObservationData(object):
         self.tajd = 0.0
         self.fusf = 0.0
         self.exphet = 0.0
-        self.useloci = useLoci
 
         if data != None:
             self.fill(data)
@@ -72,34 +70,29 @@ class ObservationData(object):
         self.gen = data['gen']
         self.locuslow = data['locuslow']
         self.locushigh = data['locushigh']
-        self.mutlow = data['mutlow']
-        self.muthigh = data['muthigh']
         self.neLow = data['nelow']
         self.neHigh = data['nehigh']
-        self.seg = data['segsites']
-        self.nucdiv = data['nucdiv']
-        self.haps = data['haptypes']
-        self.hapdiv = data['hapdiver']
-        self.pair = data['pairdiffs']
-        self.tajd = data['tajimasd']
-        self.fusf = data['f*']
-        self.exphet = data['exphet']
+        self.seg = data.get('segsites', float("NaN") )
+        self.nucdiv = data.get('nucdiv', float("NaN") )
+        self.haps = data.get('haptypes', float("NaN") )
+        self.hapdiv = data.get('hapdiver', float("NaN") )
+        self.pair = data.get('pairdiffs', float("NaN") )
+        self.tajd = data.get('tajimasd', float("NaN") )
+        self.fusf = data.get('f*', float("NaN") )
+        self.exphet = data.get('exphet', float("NaN") )
 
     def getPopRange(self):
         return (float(self.neLow), float(self.neHigh))
         
     def getMutationRange(self):
-        if self.useloci:
-            return (float(self.locuslow), float(self.locushigh))
-        else:
-            return (float(self.mutlow), float(self.muthigh))
+        return (float(self.locuslow), float(self.locushigh))
 
     def __str__(self):
         return ",".join(map(str, [self.label, self.nsam, self.nsites,
                                   self.tstv, self.gamma, self.gen, self.locushigh, 
                                   self.locuslow, self.neLow, self.neHigh, self.seg,
                                   self.nucdiv, self.haps, self.hapdiv, self.pair, 
-                                  self.tajd, self.fusf, self.exphet, self.mutlow, self.muthigh]) )
+                                  self.tajd, self.fusf, self.exphet]) )
 
 
 class BayeSSCData(object):
@@ -309,7 +302,7 @@ class ParFile(object):
     This results in a messy parser, but it should work.
     """
     def __init__(self, inName):
-	infile = open(inName)
+	infile = open(inName, "rU")
 	values = []
 	line = 0
 	for l in infile:
@@ -390,7 +383,7 @@ class ParFile(object):
 	return " ".join([e.replace(" ", "") for e in ele])
 
     def setPopulation(self, distro, poprng):
-	self.popsize = ["{%s:%f,%f}"%(distro, poprng[0], poprng[1]) for r in self.popsize  ]
+	self.popsize = ["{%s:%f,%f}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
     
     def setTime(self, time):
 	npop = []
@@ -504,7 +497,7 @@ def parseBayeSSCOut(filePath):
     takes the output fro BayeSSC and parses it so that we 
     """
     # with our assumption of 1 pop, combined and group 0 will be the same, so filter out the dup and store in a dict with the 0 removed
-    statsf = open(filePath)
+    statsf = open(filePath, "rU")
     try:
 	hdr = [ c.replace(" 0", "").strip().lower() for c in statsf.next().strip().split(",")]
     except:
@@ -526,18 +519,18 @@ def parseBayeSSCOut(filePath):
     return datadict	
 
 
-def parseObs(obs, useLoci):
+def parseObs(obs):
     """
     The observation file is a tab delimited file. This can easily be
     split and stored in memory.
     default ordering
-    >species,nsam,nsites,tstv,gamma,gen,locuslow,locushigh,Nelow,Nehigh,SegSites,nucdiv,Haptypes,HapDiver,PairDiffs,TajimasD,F*,ExpHet
-    
+    >species,nsam,nsites,tstv,gamma,gen,locuslow,locushigh,Nelow,Nehigh,SegSites,nucdiv,Haptypes,HapDiver,PairDiffs,TajimasD,F*,ExpHet   
     """
     
-    obsf = open(obs)
-    ObservationData.columns = obsf.next().strip().lower().split()
-    obsl = [ObservationData( dict(izip(ObservationData.columns, l.strip().split())), useLoci ) for l in obsf]
+    obsf = open(obs, "rU")
+    ObservationData.columns = map(string.strip, obsf.next().strip().lower().split("\t"))
+
+    obsl = [ObservationData( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
     obsf.close()
     return obsl
 
@@ -681,8 +674,9 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
             pair.Push(row.pair)
             tajd.Push(row.tajd)
             fusf.Push(row.fusf)
-		
         stats = [float('NaN'), float('NaN'), float('NaN'), float('NaN')]
+    else:
+        raise BadBayesOutput("No observation data, congruent data or random data found to compute stats on")
     stats.extend(contime.collectStats())
     stats.extend(rndtime.collectStats())
     stats.extend(overalltime.collectStats())
@@ -708,6 +702,10 @@ def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, ob
     o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations.csv"%(con_species, obsCnt, repeats)), "w")
     for trial in xrange(int(repeats)):
 	conSpecs, randSpecs, observations = splitter.split(observations, con_species)
+        #print con_species
+        #print conSpecs
+        #print randSpecs
+        #print observations
 	outstr = []
 	conspecData= []
 	randomData= []
@@ -735,18 +733,18 @@ def main():
     """
     options = commandlineArgs()
     par = ParFile(options.par)
-    observations = parseObs(options.obs, options.useLoci)
+    observations = parseObs(options.obs)
     obsCnt = len(observations)
     fname = "hyperstats_-_%s.txt"
     if options.model == None:
 	fname = fname%("models_0-%s_-_%s_iterations"%(obsCnt, options.repeats))
     else:
 	fname = fname%("model%s_of_%s"%(options.model, obsCnt))
-
-    obsStats = open(os.path.join(options.outdir,"hyperstats_-_observations.txt"), "w")
-    index = "%s_%s_%s_%s_%s"%(options.uid, 0, 0, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-    obsStats.write( "%s,%s\n"%(index, ",".join( computeStats(0,obsCnt, obsData = observations) )) )
-    obsStats.close()
+    if options.makestats:
+        obsStats = open(os.path.join(options.outdir,"hyperstats_-_observations.txt"), "w")
+        index = "%s_%s_%s_%s_%s"%(options.uid, 0, 0, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+        obsStats.write( "%s,%s\n"%(index, ",".join( computeStats(0,obsCnt, obsData = observations) )) )
+        obsStats.close()
     
     hyperstats = open(os.path.join(options.outdir, fname), "w")
     counts = dict([ (obs.label, 0) for obs in observations])
@@ -776,7 +774,7 @@ def commandlineArgs():
     parser.add_option("-o", "--outdir", dest = "outdir", help = "Directory to generate final outputs in (will create missing folders) [default: %default]", action = "store", type = "string", metavar = "PATH", default = os.getcwd())
     parser.add_option("-t", "--timerange", dest= "trange", help = "The range of values to select the time from (Integers). Example: 1000:20000  [required]", action = "store", type = "string", metavar ="RANGE")
     parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
-    parser.add_option("", "--mutate", action="store_false", dest="useLoci", default=True, help="When set uses the mutlow and muthigh columns instead of locilow/locihigh for subsitution into the par file")
+    parser.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
     (options, args) = parser.parse_args()    
     
     if not options.par:
