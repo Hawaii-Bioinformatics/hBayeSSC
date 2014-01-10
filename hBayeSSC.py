@@ -692,14 +692,15 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
     return map(str, stats)
     
 
-def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, observations, repeats, LPType, par, con_species, obsCnt, counts):
+def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, observations, repeats, LPType, par, con_species, obsCnt, counts, onlyHyperstats):
     """
     a model describes how many observations make up the congruent group.  for instance, model0, means we have no congruent observations.
     This method is meant to contain all actions required to execute this script on a single model.  It will take that model, and
     repeat the experiment multiple times, each time splitting the observations again and again.
     """
     print >> sys.stderr , ".",
-    o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations.csv"%(con_species, obsCnt, repeats)), "w")
+    if not onlyHyperstats:
+        o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations.csv"%(con_species, obsCnt, repeats)), "w")
     for trial in xrange(int(repeats)):
 	conSpecs, randSpecs, observations = splitter.split(observations, con_species)
         #print con_species
@@ -719,11 +720,13 @@ def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, ob
 	    randomData.extend(rows)
 	    outstr.append( ",".join( ( str(r) for r in rows) ) )
 	hyperstats.write( "%s,%s\n"%(index, ",".join( computeStats(len(conSpecs), obsCnt, conspecData, randomData) )) )
-	o.write("%s,%s\n"%(index, ",".join(outstr)))
-    o.close()
-    o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations_congruent_appearance.csv"%(con_species, obsCnt, repeats)), "w")
-    o.write("\n".join( [",".join(map(str, itm)) for itm in counts.iteritems() ] ) )
-    o.close()
+        if not onlyHyperstats:
+            o.write("%s,%s\n"%(index, ",".join(outstr)))
+    if not onlyHyperstats:
+        o.close()
+        o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations_congruent_appearance.csv"%(con_species, obsCnt, repeats)), "w")
+        o.write("\n".join( [",".join(map(str, itm)) for itm in counts.iteritems() ] ) )
+        o.close()
 
 
 def main():
@@ -754,9 +757,9 @@ def main():
 	for con_species in xrange(obsCnt + 1):
 	    for k in counts:
 		counts[k] = 0
-	    performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, con_species, obsCnt, counts)
+	    performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, con_species, obsCnt, counts, options.onlyHyperstats)
     else:
-	performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, options.model, obsCnt, counts)
+	performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, options.model, obsCnt, counts, options.onlyHyperstats)
 
 	
 def commandlineArgs():
@@ -775,6 +778,8 @@ def commandlineArgs():
     parser.add_option("-t", "--timerange", dest= "trange", help = "The range of values to select the time from (Integers). Example: 1000:20000  [required]", action = "store", type = "string", metavar ="RANGE")
     parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
     parser.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
+    parser.add_option("", "--only_hyperstats", action="store_true", dest="onlyHyperstats", default=False, help="When set, will only generate the hyperstats file")
+
     (options, args) = parser.parse_args()    
     
     if not options.par:
