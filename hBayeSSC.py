@@ -35,7 +35,7 @@ def skipNanInf(value):
     try:
         value = float(value)
         return isnan(value) or isinf(value)
-    except:
+    except ValueError:
         return True
 
  
