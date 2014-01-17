@@ -12,6 +12,12 @@ from optparse import OptionParser
 
 
 """
+#change , delimited to tab \t
+#generate single files for the hyperstats and the iterations
+# script to count appearances from hyperstats or UID list
+# remove appearance count
+# script to pull specific models by UID
+
 Author: David Schanzenbach
 Original scripts by: Yvonne Chan
 
@@ -747,18 +753,18 @@ def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, ob
 	if conSpecs:
 	    rows, counts = generateCONSpecs(parName, par, conSpecs, counts, timerange, outdir, LPType = LPType)
 	    conspecData.extend(rows)
-	    outstr.append( ",".join( ( str(r) for r in rows) ) )
+	    outstr.append( "\t".join( ( str(r) for r in rows) ) )
 	if randSpecs:
 	    rows = generateRANDSpecs(parName, par, randSpecs, timerange, outdir, LPType = LPType)
 	    randomData.extend(rows)
-	    outstr.append( ",".join( ( str(r) for r in rows) ) )
-	hyperstats.write( "%s,%s\n"%(index, ",".join( computeStats(len(conSpecs), obsCnt, conspecData, randomData) )) )
+	    outstr.append( "\t".join( ( str(r) for r in rows) ) )
+	hyperstats.write( "%s,%s\n"%(index, "\t".join( computeStats(len(conSpecs), obsCnt, conspecData, randomData) )) )
         if not onlyHyperstats:
-            o.write("%s,%s\n"%(index, ",".join(outstr)))
+            o.write("%s,%s\n"%(index, "\t".join(outstr)))
     if not onlyHyperstats:
         o.close()
         o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations_congruent_appearance.csv"%(con_species, obsCnt, repeats)), "w")
-        o.write("\n".join( [",".join(map(str, itm)) for itm in counts.iteritems() ] ) )
+        o.write("\n".join( ["\t".join(map(str, itm)) for itm in counts.iteritems() ] ) )
         o.close()
 
 
@@ -779,7 +785,7 @@ def main():
     if options.makestats:
         obsStats = open(os.path.join(options.outdir,"hyperstats_-_observations.txt"), "w")
         index = "%s_%s_%s_%s_%s"%(options.uid, 0, 0, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-        obsStats.write( "%s,%s\n"%(index, ",".join( computeStats(0,obsCnt, obsData = observations) )) )
+        obsStats.write( "%s\t%s\n"%(index, "\t".join( computeStats(0,obsCnt, obsData = observations) )) )
         obsStats.close()
     
     hyperstats = open(os.path.join(options.outdir, fname), "w")
