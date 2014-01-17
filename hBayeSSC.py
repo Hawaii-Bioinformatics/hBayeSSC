@@ -7,7 +7,7 @@ import copy
 import random
 import time
 import string
-from math import sqrt
+from math import sqrt, isnan, isinf
 from optparse import OptionParser
 
 
@@ -28,6 +28,17 @@ BAYESSC_PATH = ""
 RETRIES = 10
 
 
+def skipNanInf(value):
+    """
+    The default filtering action used by RunningStat when using Push()
+    """
+    try:
+        value = float(value)
+        return isnan(value) or isinf(value)
+    except:
+        return True
+
+ 
 class ObservationData(object):
     # default column order
     columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet']
@@ -181,8 +192,10 @@ class RunningStat(object):
         self.M3 = 0.0
         self.M4 = 0.0
 
-    def Push(self, x):
+    def Push(self, x, filterFunction = skipNanInf):
         x = float(x)
+        if filterFuction(x):
+            return
         delta = 0.0
         delta_n = 0.0
         delta_n2 = 0.0
@@ -202,6 +215,8 @@ class RunningStat(object):
         return self.n
 
     def Mean(self):
+        if self.NumDataValues() == 0:
+            return float('NaN')
         return self.M1
 
     def Variance(self):
@@ -215,12 +230,32 @@ class RunningStat(object):
 
     def Kurtosis(self):
         return float(self.n) * self.M4 / (self.M2 * self.M2) - 3.0;
-    
+
+    def Dispersion(self):
+        try:
+            return self.Variance() / self.Mean()
+        except ZeroDivisionError:
+            return float('Nan')
+        
+    def collectMeanAndVariance(self):
+        values = [float('NaN'), float('NaN')]
+	if self.n == 0:
+	    return values
+        try:
+            values[0] = "%f"%(self.Mean())
+        except ZeroDivisionError:
+            pass
+        try:
+            values[1] = "%f"%(self.Variance())
+        except ZeroDivisionError:
+            pass
+        return values
+
     def collectStats(self):
         # division by zero can occur when dealing with times (model 0 and model 1)
         # force the division by zero to result in all stats being 0. for our sanity!
         values = [float('NaN'), float('NaN'), float('NaN'), float('NaN')]
-	if self.n == 0:
+	if self.NumDataValues() == 0:
 	    return values
         try:
             values[0] = "%f"%(self.Mean())
@@ -623,6 +658,8 @@ def generateRANDSpecs(origParName, parData, observations, timerange, outdir, LPT
     return rows
 
 
+
+
 def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
     """
     Using the collect data from multipl repeats, compute some statistics on particular data columns
@@ -664,7 +701,7 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
             fusf.Push(row.fusf)
 
         overalltime = mergeRunningStats(rndtime, contime)
-        stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Variance() / overalltime.Mean()]             
+        stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Mean(), overalltime.Dispersion()]             
     elif obsData:
         # compute the stats for the observation file.  Computer only those that are identical to the hyperstats output
         for row in obsData:
@@ -674,15 +711,15 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
             pair.Push(row.pair)
             tajd.Push(row.tajd)
             fusf.Push(row.fusf)
-        stats = [float('NaN'), float('NaN'), float('NaN'), float('NaN')]
+        stats = [float('NaN'), float('NaN'), float('NaN'), float('NaN'), float('NaN')]
     else:
         raise BadBayesOutput("No observation data, congruent data or random data found to compute stats on")
-    stats.extend(contime.collectStats())
-    stats.extend(rndtime.collectStats())
+    stats.extend( [contime.Mean(), contime.Dispersion()] )
+    stats.extend( [rndtime.Mean(), rndtime.Dispersion()] )
     stats.extend(overalltime.collectStats())
-    stats.extend(Ne.collectStats())
-    stats.extend(expan.collectStats())
-    stats.extend(mu.collectStats())
+    stats.extend(Ne.collectMeanAndVariance())
+    stats.extend(expan.collectMeanAndVariance())
+    stats.extend(mu.collectMeanAndVariance())
     stats.extend(haps.collectStats())
     stats.extend(hapdiv.collectStats())
     stats.extend(nucdiv.collectStats())
@@ -703,10 +740,6 @@ def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, ob
         o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations.csv"%(con_species, obsCnt, repeats)), "w")
     for trial in xrange(int(repeats)):
 	conSpecs, randSpecs, observations = splitter.split(observations, con_species)
-        #print con_species
-        #print conSpecs
-        #print randSpecs
-        #print observations
 	outstr = []
 	conspecData= []
 	randomData= []
