@@ -30,40 +30,66 @@ Assumptions:
 """
 
 
-def skipNanInf(value):
-    """
-    The default filtering action used by RunningStat when using Push()
-    """
-    try:
-        value = float(value)
-        return isnan(value) or isinf(value)
-    except ValueError:
-        return True
 
+class BadBayesOutput(Exception):
+    """
+    custom exception class to signify we had a problem with the BayeSSC output/execution
+    """
+    def __init__(self, val):
+	self.val = val
+    def __str__(self):
+	return repr(self.val)
+	 
+class CommonData(object):
  
-class ObservationData(object):
-    # default column order
-    columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet']
-    def __init__(self, data = None):
+    def __init__(self):
         self.label = ""
         self.nsam = 0.0
         self.nsites = 0.0
-        self.tstv = 0.0
-        self.gamma = 0.0
-        self.gen = 0.0
-        self.locuslow = 0.0
-        self.locushigh = 0.0
-        self.neLow = 0.0
-        self.neHigh = 0.0
-        self.seg = 0.0
-        self.nucdiv = 0.0
         self.haps = 0.0
-        self.hapdiv = 0.0
+        self.seg = 0.0
         self.pair = 0.0
+        self.hapdiv = 0.0
+        self.nucdiv = 0.0
         self.tajd = 0.0
         self.fusf = 0.0
-        self.exphet = 0.0
 
+	
+    def fill(self, label, nsam, nsites, statsData, nucdiv):
+	self.label = label
+	self.nsam = nsam
+	self.nsites = nsites
+	self.haps = data.get('haptypes', float("NaN") )
+	self.seg = data.get('segsites', float("NaN") )
+	self.pair = data.get('pairdiffs', float("NaN") )
+	self.nucdiv = nucdiv #data.get('nucdiv', data.get('nucltddiv',float("NaN")) )
+	self.hapdiv = data.get('hapdiver', float("NaN") )
+	self.tajd = data.get('tajimasd', float("NaN") )
+	self.fusf = data.get('f*', float("NaN") )
+
+    def addStats(self, statsdict):
+	statsdict['haps'].Push(self.haps)
+	statsdict['hapdiv'].Push(self.hapdiv)
+	statsdict['nucdiv'].Push(self.nucdiv)
+	statsdict['pair'].Push(self.pair)
+	statsdict['tajd'].Push(self.tajd)
+	statsdict['fusf'].Push(self.fusf)
+	return statsdict
+
+ 
+class ObservationData(CommonData):
+    # default column order
+    columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet']
+    def __init__(self, data = None):
+	super(ObservationData, self).__init__()
+	self.gamma = 0.0
+	self.gen = 0.0
+	self.locuslow = 0.0
+	self.locushigh = 0.0
+	self.neLow = 0.0
+	self.neHigh = 0.0
+	self.exphet = 0.0
+	self.tstv = 0.0
         if data != None:
             self.fill(data)
 
@@ -73,11 +99,7 @@ class ObservationData(object):
         - statsdata is the data generated in the *_stat.csv from BayeSSC
         - time is a random int, between 2 user defined values.
         """
-        #columns = ['species','nsam','nsites','tstv','gamma','gen','locuslow','locushigh','nelow','nehigh','segsites','nucdiv','haptypes','hapdiver','pairdiffs','tajimasd','f*','exphet']
-
-        self.label = data['species']
-        self.nsam = data['nsam']
-        self.nsites = data['nsites']
+	super(ObservationData, self).fill(data['species'], data['nsam'], data['nsites'], data, data.get('nucdiv', float("NaN") )) 	           
         self.tstv = data['tstv']
         self.gamma = data['gamma']
         self.gen = data['gen']
@@ -85,14 +107,11 @@ class ObservationData(object):
         self.locushigh = data['locushigh']
         self.neLow = data['nelow']
         self.neHigh = data['nehigh']
-        self.seg = data.get('segsites', float("NaN") )
-        self.nucdiv = data.get('nucdiv', float("NaN") )
-        self.haps = data.get('haptypes', float("NaN") )
-        self.hapdiv = data.get('hapdiver', float("NaN") )
-        self.pair = data.get('pairdiffs', float("NaN") )
-        self.tajd = data.get('tajimasd', float("NaN") )
-        self.fusf = data.get('f*', float("NaN") )
         self.exphet = data.get('exphet', float("NaN") )
+
+
+    def addStats(self, statsdict):
+	return super(ObservationData, self).addStats(statsdict)
 
     def getPopRange(self):
         return (float(self.neLow), float(self.neHigh))
@@ -108,43 +127,24 @@ class ObservationData(object):
                                   self.tajd, self.fusf, self.exphet]) )
 
 
-class BayeSSCData(object):
+class BayeSSCData(CommonData):
     """
     -- mapping for bayssc output to BayeSSCData
-    species.txt, obs[0]    nsam.txt, obs[1]
-    nsites.txt, obs[2]    GROUP 0,
-    Haptypes, haps    PrivHaps,
-    SegSites, seg    PairDiffs, pair
-    HapDiver, hapdiv    NucltdDiv, nucdiv
-    TajimasD, tajd    F*, fusf
-    MismatDist,    COMBINED,
-    Haptypes,    PrivHaps,
-    SegSites,    PairDiffs,
-    HapDiver,    NucltdDiv,
-    TajimasD,    F*,
-    MismatDist,    MRCA,
-    PRIORS,    Deme Size 0, Ne
-    Event Size 0, expan    Mutation Rate 0, mu
+    species.txt, obs[0]    nsam.txt, obs[1]    nsites.txt, obs[2]    GROUP 0,
+    Haptypes, haps    PrivHaps,    SegSites, seg    PairDiffs, pair    HapDiver, hapdiv    NucltdDiv, nucdiv    TajimasD, tajd    F*, fusf
+    MismatDist,    COMBINED,    Haptypes,    PrivHaps,    SegSites,    PairDiffs,    HapDiver,    NucltdDiv,
+    TajimasD,    F*,    MismatDist,    MRCA,    PRIORS,    Deme Size 0, Ne    Event Size 0, expan    Mutation Rate 0, mu
     number.txt(randint) time
     """
 
     def __init__(self, obs = None, time = None, data = None):
-        self.label = ""
-        self.nsam = 0.0
-        self.nsites = 0.0
-        self.haps = 0.0
-        self.seg = 0.0
-        self.pair = 0.0
-        self.hapdiv = 0.0
-        self.nucdiv = 0.0
-        self.tajd = 0.0
-        self.fusf = 0.0
-        self.ne = 0.0
-        self.expan = 0.0
-        self.mu = 0.0
-        self.time = 0.0
+	super(BayeSSCData, self).__init__()
+	self.ne = 0.0
+	self.expan = 0.0
+	self.mu = 0.0
+	self.time = 0.0
         if obs != None and time != None and data != None:
-	        self.fill(obs, time, data)
+	    self.fill(obs, time, data)
 	
     def fill(self, obsData, time, statsData):
         """
@@ -152,20 +152,18 @@ class BayeSSCData(object):
         - statsdata is the data generated in the *_stat.csv from BayeSSC
         - time is a random int, between 2 user defined values.
         """
-        self.label = obsData.label
-        self.nsam = obsData.nsam
-        self.nsites = obsData.nsites
-        self.haps = statsData['haptypes']
-        self.seg = statsData['segsites']
-        self.pair = statsData['pairdiffs']
-        self.hapdiv = statsData['hapdiver']
-        self.nucdiv = statsData['nucltddiv']
-        self.tajd = statsData['tajimasd']
-        self.fusf =  statsData['f*']
-        self.ne = statsData['deme size']
-        self.expan = statsData['event size']
-        self.mu = statsData['mutation rate']
-        self.time = time
+	super(BayeSSCData, self).fill(obsData.label, obsData.nsam, obsData.nsites, statsData, statsData.get('nucltddiv', float("NaN") )) 
+	self.ne = statsData['deme size']
+	self.expan = statsData['event size']
+	self.mu = statsData['mutation rate']
+	self.time = time
+
+    def addStats(self, statsdict):
+	statsdict = super(BayeSSCData, self).addStats(statsdict)
+	statsdict['mu'].Push(self.mu)
+	statsdict['ne'].Push(self.ne)
+	statsdict['expan'].Push(self.expan)
+	return statsdict
 
     def __str__(self):
         return "\t".join(map(str, [self.label,
@@ -195,7 +193,7 @@ class RunningStat(object):
 
     def Push(self, x, filterFunction = skipNanInf):
         x = float(x)
-        if filterFuction(x):
+        if filterFuction and filterFuction(x):
             return
         delta = 0.0
         delta_n = 0.0
@@ -238,8 +236,7 @@ class RunningStat(object):
         except ZeroDivisionError:
             return float('Nan')
         
-    def collectMeanAndVariance(self):
-        values = [float('NaN'), float('NaN')]
+    def collectMeanAndVariance(self, values = [float('NaN'), float('NaN')] ):
 	if self.n == 0:
 	    return values
         try:
@@ -257,15 +254,8 @@ class RunningStat(object):
         # force the division by zero to result in all stats being 0. for our sanity!
         values = [float('NaN'), float('NaN'), float('NaN'), float('NaN')]
 	if self.NumDataValues() == 0:
-	    return values
-        try:
-            values[0] = "%f"%(self.Mean())
-        except ZeroDivisionError:
-            pass
-        try:
-            values[1] = "%f"%(self.Variance())
-        except ZeroDivisionError:
-            pass
+	    return values	
+	values = self.collectMeanAndVariance(values)
         try:
             values[2] = "%f"%(self.Skewness())
         except ZeroDivisionError:
@@ -276,36 +266,6 @@ class RunningStat(object):
             pass
         return values
 
-   
-def mergeRunningStats(a, b):
-    """
-    Could be part of the RunningStats class, but works just as well outside the class.
-    Takes 2 RunningStat objects and combines their stored values into a 3rd RunningStat.
-    """
-    combined = RunningStat()
-    combined.n += a.n + b.n
-    delta = b.M1 - a.M1
-    delta2 = delta * delta
-    delta3 = delta * delta2
-    delta4 = delta2 * delta2
-    combined.M1 = (a.n * a.M1 + b.n * b.M1) / combined.n
-    combined.M2 = a.M2 + b.M2 + delta2 * a.n * b.n / combined.n
-    combined.M3 = a.M3 + b.M3 + delta3 * a.n * b.n * (a.n - b.n)/(combined.n * combined.n)
-    combined.M3 += 3.0 * delta * (a.n * b.M2 - b.n * a.M2) / combined.n
-    combined.M4 = a.M4 + b.M4 + delta4 * a.n * b.n * (a.n * a.n - a.n * b.n + b.n * b.n) / (combined.n * combined.n * combined.n)
-    combined.M4 += 6.0 * delta2 * (a.n * a.n * b.M2 + b.n * b.n * a.M2) / (combined.n * combined.n) + 4.0 * delta * (a.n * b.M3 - b.n * a.M3) / combined.n
-    return combined
-
-
-class BadBayesOutput(Exception):
-    """
-    custom exception class to signify we had a problem with the BayeSSC output/execution
-    """
-    def __init__(self, val):
-	self.val = val
-    def __str__(self):
-	return repr(self.val)
-	
 
 class ParFile(object):
     """
@@ -349,7 +309,7 @@ class ParFile(object):
 		    line += 1
 	    elif line == 7:
 		c = int(self.eCnt.split()[0])
-		self.events = [self.bayesSplit(l)] + [ self.bayesSplit(infile.next().strip()) for x in xrange(int(c) - 1)]
+		self.events = [self.splitPrior(l)] + [ self.splitPrior(infile.next().strip()) for x in xrange(int(c) - 1)]
 	    elif line == 8:
 		self.rate = l
 	    elif line == 9:
@@ -363,7 +323,7 @@ class ParFile(object):
 	self.error =  line != 12
 
 
-    def bayesSplit(self, line):
+    def splitPrior(self, line):
         """
         certain fields in the par file use {} to demark a single value.
         We utilize a similar idea found in the BayeSSC code that only looks
@@ -480,73 +440,67 @@ class TimeGenerator(object):
 	    """
 	    return random.randint(min(timerange), max(timerange))
 
+	   
+def mergeRunningStats(a, b):
+    """
+    Could be part of the RunningStats class, but works just as well outside the class.
+    Takes 2 RunningStat objects and combines their stored values into a 3rd RunningStat.
+    """
+    combined = RunningStat()
+    combined.n += a.n + b.n
+    delta = b.M1 - a.M1
+    delta2 = delta * delta
+    delta3 = delta * delta2
+    delta4 = delta2 * delta2
+    combined.M1 = (a.n * a.M1 + b.n * b.M1) / combined.n
+    combined.M2 = a.M2 + b.M2 + delta2 * a.n * b.n / combined.n
+    combined.M3 = a.M3 + b.M3 + delta3 * a.n * b.n * (a.n - b.n)/(combined.n * combined.n)
+    combined.M3 += 3.0 * delta * (a.n * b.M2 - b.n * a.M2) / combined.n
+    combined.M4 = a.M4 + b.M4 + delta4 * a.n * b.n * (a.n * a.n - a.n * b.n + b.n * b.n) / (combined.n * combined.n * combined.n)
+    combined.M4 += 6.0 * delta2 * (a.n * a.n * b.M2 + b.n * b.n * a.M2) / (combined.n * combined.n) + 4.0 * delta * (a.n * b.M3 - b.n * a.M3) / combined.n
+    return combined
+
+def skipNanInf(value):
+    """
+    The default filtering action used by RunningStat when using Push()
+    """
+    try:
+	value = float(value)
+	return isnan(value) or isinf(value)
+    except ValueError:
+	return True
+
 
 def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
     """
     Using the collect data from multipl repeats, compute some statistics on particular data columns
     """
-    expan = RunningStat()
-    mu = RunningStat()
-    Ne = RunningStat()	
-    contime = RunningStat()	
-    rndtime = RunningStat()	
-    haps = RunningStat()	
-    hapdiv = RunningStat()	
-    nucdiv = RunningStat()	
-    pair  = RunningStat()	
-    tajd = RunningStat()	
-    fusf = RunningStat()
-    overalltime = RunningStat()
+    statsdict = dict(expan = RunningStat(), mu = RunningStat(), ne = RunningStat(), contime = RunningStat(), 
+                 rndtime = RunningStat(), haps = RunningStat(), hapdiv = RunningStat(), nucdiv = RunningStat(), 
+                 pair = RunningStat(), tajd = RunningStat(), fusf = RunningStat(), overalltime = RunningStat())
+
     if conspecData or randomData:
         for row in conspecData:
-            expan.Push(row.expan)
-            mu.Push(row.mu)
-            Ne.Push(row.ne)
+	    statsdict = row.addStats(statsdict)
             contime.Push(row.time)
-            haps.Push(row.haps)
-            hapdiv.Push(row.hapdiv)
-            nucdiv.Push(row.nucdiv)
-            pair.Push(row.pair)
-            tajd.Push(row.tajd)
-            fusf.Push(row.fusf)
         for row in randomData:
-            expan.Push(row.expan)
-            mu.Push(row.mu)
-            Ne.Push(row.ne)
+	    statsdict = row.addStats(statsdict)
             rndtime.Push(row.time)
-            haps.Push(row.haps)
-            hapdiv.Push(row.hapdiv)
-            nucdiv.Push(row.nucdiv)
-            pair.Push(row.pair)
-            tajd.Push(row.tajd)
-            fusf.Push(row.fusf)
-
         overalltime = mergeRunningStats(rndtime, contime)
         stats = [congruentCnt, total, float(congruentCnt) / float(total) , overalltime.Mean(), overalltime.Dispersion()]             
     elif obsData:
         # compute the stats for the observation file.  Computer only those that are identical to the hyperstats output
         for row in obsData:
-            haps.Push(row.haps)
-            hapdiv.Push(row.hapdiv)
-            nucdiv.Push(row.nucdiv)
-            pair.Push(row.pair)
-            tajd.Push(row.tajd)
-            fusf.Push(row.fusf)
+	    statsdict = row.addStats(statsdict)
         stats = [float('NaN'), float('NaN'), float('NaN'), float('NaN'), float('NaN')]
     else:
         raise BadBayesOutput("No observation data, congruent data or random data found to compute stats on")
-    stats.extend( [contime.Mean(), contime.Dispersion()] )
-    stats.extend( [rndtime.Mean(), rndtime.Dispersion()] )
-    stats.extend(overalltime.collectStats())
-    stats.extend(Ne.collectMeanAndVariance())
-    stats.extend(expan.collectMeanAndVariance())
-    stats.extend(mu.collectMeanAndVariance())
-    stats.extend(haps.collectStats())
-    stats.extend(hapdiv.collectStats())
-    stats.extend(nucdiv.collectStats())
-    stats.extend(tajd.collectStats())
-    stats.extend(fusf.collectStats())
-    stats.extend(pair.collectStats())
+    stat_p1 = ( [statsdict[k].Mean(), statsdict[k].Dispersion() ] for k in ['contime', 'rndtime', 'overalltime'] )
+    stat_p2 = ( statsdict[k].collectMeanAndVariance() for k in ['ne', 'expan', 'mu'] )
+    stat_p3 = ( statsdict[k].collectStats() for k in ['haps', 'hapdiv', 'nucdiv', 'tajd', 'fusf', 'pair'] )
+    stats.extend(start_p1)
+    stats.extend(start_p2)
+    stats.extend(start_p3)
     return map(str, stats)
     
 
@@ -556,9 +510,21 @@ class BayeSSC(object):
 		self.execpath = execpath
 		self.retires = retries
 
+	def __getStatsPath(self, parPath):
+	    """
+	    convert the par file path into the bayessc stats file path
+
+	    TODO: DLS - This may break under certain conditions.  need to verify
+	    """
+	    
+	#	parfile = os.path.split(parPath)[-1]
+	#	parfile = os.path.splitext(parfile)[0] + "_stat.csv"
+	#    return os.path.join(workdir, parfile)
+	    return os.path.splitext(parPath)[0] + "_stat.csv"
+
 	def __parseBayeSSCOut(self, filePath):
 	    """
-	    takes the output fro BayeSSC and parses it so that we 
+	    takes the output from BayeSSC and places it into a dictionary
 	    """
 	    # with our assumption of 1 pop, combined and group 0 will be the same, so filter out the dup and store in a dict with the 0 removed
 	    statsf = open(filePath, "rU")
@@ -582,17 +548,6 @@ class BayeSSC(object):
 	    statsf.close()
 	    return datadict	
 
-
-	def __getStatsPath(self, parPath):
-	    """
-	    convert the par file path into the bayessc stats file path
-	    """
-	#	parfile = os.path.split(parPath)[-1]
-	#	parfile = os.path.splitext(parfile)[0] + "_stat.csv"
-	#    return os.path.join(workdir, parfile)
-	    return os.path.splitext(parPath)[0] + "_stat.csv"
-
-
 	def runBayeSSC(self, obs, time, par, outdir = ".", parname = "tmp.par"):
 	    """
 	    Execute BayeSSC and then parse the data generated by the run.
@@ -603,23 +558,16 @@ class BayeSSC(object):
 	    o.close()
 	    os.system("%s -f %s 1 &>/dev/null"%(self.execpath, fpath))
 	    data = self.__parseBayeSSCOut(self.__getStatsPath(fpath))
-	    dmap = BayeSSCData(obs, time, data)
-	    return dmap
+	    return BayeSSCData(obs, time, data)
 
-	def exceuteBateSSCWIthRetry(self, obs, chngtime, par, outdir):
-	    attempts = 0
-	    run = True
-	    while run:
+	def exceuteBateSSCWithRetry(self, obs, chngtime, par, outdir):
+	    for x in xrange(self.retires):
 		try:
-		    row = runBayeSSC(obs, chngtime, par, outdir)
-		    run = False
-		    return row
+		    bayeData = runBayeSSC(obs, chngtime, par, outdir)
+		    return bayeData
 		except BadBayesOutput:
-		    attempts += 1
-		    if attempts >= self.retires:
-			raise BadBayesOutput("Attempted to run BayeSSC %s times, each run resulted in an output error.", self.retires)
 		    print >> sys.stderr, "Error running bayeSSC.  Trying again"    
-	    return None
+	    raise BadBayesOutput("Attempted to run BayeSSC %s times, each run resulted in an output error.", self.retires)
 
 
 class Model(object):
@@ -653,11 +601,11 @@ class Model(object):
 		if conSpecs:
 		    rows = self.__generateCONSpecs(self.options.par, self.par, conSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
 		    conspecData.extend(rows)
-		    outstr.append( Model.FIELD_DELIM.join( ( str(r) for r in rows) ) )
+		    outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
 		if randSpecs:
 		    rows = self.__generateRANDSpecs(self.options.par, self.par, randSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
 		    randomData.extend(rows)
-		    outstr.append( Model.FIELD_DELIM.join( ( str(r) for r in rows) ) )
+		    outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
 
 		hyperstatsOut.write( "%s%s%s\n"%(indx, Model.FIELD_DELIM, "\t".join( computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )) )
 		if runDatOut:
@@ -666,7 +614,7 @@ class Model(object):
 
 	def __commonExec(self, obs parData, time, LPType, PopType, outdir, rows):
 		chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType)
-		row = self.bayessc.exceuteBateSSCWIthRetry(obs, chngtime, par, outdir)
+		row = self.bayessc.exceuteBateSSCWithRetry(obs, chngtime, par, outdir)
 		if row:
 		    rows.append(row)
 		return rows
@@ -730,7 +678,6 @@ def parseObs(obs):
 
     obsf = open(obs, "rU")
     ObservationData.columns = map(string.strip, obsf.next().strip().lower().split("\t"))
-
     obsl = [ObservationData( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
     obsf.close()
     return obsl
@@ -765,24 +712,27 @@ def main():
     par = ParFile(options.par)
     observations = parseObs(options.obs)
     obsCnt = len(observations)
-
+    if options.model
     if options.makestats:
-        obsStats = open(os.path.join(options.outdir,"hyperstats_-_observations.txt"), "w")
-        index = "%s_%s_%s_%s_%s"%(options.uid, 0, 0, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-        obsStats.write( "%s%s%s\n"%(index, Model.FIELD_DELIM, Model.FIELD_DELIM.join( computeStats(0,obsCnt, obsData = observations) )) )
+        obsStats = open(os.path.join(options.outdir,"hyperstats_observations.txt"), "w")
+        index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+        obsStats.write( "%s%s%s\n"%(index, Model.FIELD_DELIM, Model.FIELD_DELIM.join( computeStats(0, obsCnt, obsData = observations) )) )
         obsStats.close()
     
     hyperstats = open(os.path.join(options.outdir, "hyperstats_iterations_%s.txt"), "w")
     runData = None
     if not self.options.onlyHyperstats:
 	    runData = open(os.path.join(options.outdir, "run_data_iterations_%s.csv"%(repeats)), "w")
-    processor = Model(options, par, con_species, obsCnt,ObservationSplitter("uniform"), TimeGenerator("uniform"), BayeSSC(options.bayesPath) )       
+    processor = Model(options, par, con_species, obsCnt, ObservationSplitter("uniform"), TimeGenerator("uniform"), BayeSSC(options.bayesPath) )       
     if options.model == None:
-	for modelNum in xrange(obsCnt + 1):
-	modelNumber, hyperstatsOut = None, runDatOut = None
-		processor.execute(modelNum, hyperstats)
+	for modelNum in xrange(obsCnt + 1):	    
+	    processor.execute(modelNum, hyperstats, runData)
+	    if hyperstats:
+		hyperstats.flush()
+	    if runData:
+		runData.flush()
     else:
-	processor.execute(options.model)
+	processor.execute(options.model, hyperstats, runData)
 
     hyperstats.close()
     if runData:
