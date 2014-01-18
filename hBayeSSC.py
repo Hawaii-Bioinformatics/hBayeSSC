@@ -12,10 +12,10 @@ from optparse import OptionParser
 
 
 """
-#change , delimited to tab \t
+*#change , delimited to tab \t
+*# remove appearance count 
 #generate single files for the hyperstats and the iterations
 # script to count appearances from hyperstats or UID list
-# remove appearance count
 # script to pull specific models by UID
 
 Author: David Schanzenbach
@@ -28,10 +28,6 @@ Assumptions:
 - Assume the population count is always 1
 - Assume only 1 iteration in BayeSSC per run
 """
-
-
-BAYESSC_PATH = ""
-RETRIES = 10
 
 
 def skipNanInf(value):
@@ -105,7 +101,7 @@ class ObservationData(object):
         return (float(self.locuslow), float(self.locushigh))
 
     def __str__(self):
-        return ",".join(map(str, [self.label, self.nsam, self.nsites,
+        return "\t".join(map(str, [self.label, self.nsam, self.nsites,
                                   self.tstv, self.gamma, self.gen, self.locushigh, 
                                   self.locuslow, self.neLow, self.neHigh, self.seg,
                                   self.nucdiv, self.haps, self.hapdiv, self.pair, 
@@ -172,7 +168,7 @@ class BayeSSCData(object):
         self.time = time
 
     def __str__(self):
-        return ",".join(map(str, [self.label,
+        return "\t".join(map(str, [self.label,
                          self.nsam,    self.nsites, 
                          self.haps,    self.seg, 
                          self.pair,    self.hapdiv, 
@@ -181,7 +177,6 @@ class BayeSSCData(object):
                          self.expan,   self.mu, 
                          self.time]))
             
-
 
 class RunningStat(object):
     #http://www.johndcook.com/skewness_kurtosis.html
@@ -280,28 +275,6 @@ class RunningStat(object):
         except ZeroDivisionError:
             pass
         return values
-                                                                                                                                                   
-#     def collectStats(self):
-# 	# division by zero can occur when dealing with times (model 0 and model 1)
-# 	# force the division by zero to result in all stats being 0. for our sanity!
-#         values = [0,0,0,0]
-#         try:
-# 	   values[0] = self.Mean()
-# 	except ZeroDivisionError:
-#             pass
-#         try:
-# 	    values[1] = self.Variance()
-# 	except ZeroDivisionError:
-#             pass
-#         try:
-#             values[2] = self.Skewness()
-# 	except ZeroDivisionError:
-#             pass
-# 	try:
-# 	    values[3] = self.Kurtosis()
-# 	except ZeroDivisionError:
-#             pass
-#         return values
 
    
 def mergeRunningStats(a, b):
@@ -469,7 +442,7 @@ class ParFile(object):
                 self.popcnt, "\n".join(self.popsize), self.sSize, self.growth, self.matrixStr(), self.eCnt, self.eventStr(), self.rate, self.loci, self.type, self.gamma)
 
 
-class ObservationSplitter:
+class ObservationSplitter(object):
     """
     a simple class that depending on which splitType is selected, can be used to split the obvervations up
     """
@@ -483,7 +456,7 @@ class ObservationSplitter:
     def __splitIndentity(self, observations, con_species):
         conSpecs = observations[:con_species]
         randSpecs = observations[con_species:]
-        return conSpecs, randSpecs, observations
+        return conSpecs, randSpecs #, observations
     
     def __splitUniform(self, observations, con_species, shuffleAction = random.random):
         """
@@ -494,176 +467,18 @@ class ObservationSplitter:
         return self.__splitIndentity(observations, con_species)
 
 
-def is_exe(fpath):
-    # http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
-    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+class TimeGenerator(object):
+	def __init__(self, genType = 'uniform'):
+		timeGens ={'uniform':self.__generatedUniformTime}
+		self.generate = timeGens.get(genType, None)
+		if(not self.generate):
+		    raise KeyError("Unknown Time generator. Valid choices: %s"%(timeGens.keys()))
 
-def which(program):
-    # http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
-    """
-    Validate that the user provided path, does infact exist for BayeSSC
-    """
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-    return None
-    
-
-def generatedUniformTime(timerange):
-    """
-    generated a time value between the high and low value provided
-    """
-    return random.randint(min(timerange), max(timerange))
-
-
-def getStatsPath(parPath):
-    """
-    convert the par file path into the bayessc stats file path
-    """
-#	parfile = os.path.split(parPath)[-1]
-#	parfile = os.path.splitext(parfile)[0] + "_stat.csv"
-#    return os.path.join(workdir, parfile)
-    return os.path.splitext(parPath)[0] + "_stat.csv"
-   
-
-def parseBayeSSCOut(filePath):
-    """
-    takes the output fro BayeSSC and parses it so that we 
-    """
-    # with our assumption of 1 pop, combined and group 0 will be the same, so filter out the dup and store in a dict with the 0 removed
-    statsf = open(filePath, "rU")
-    try:
-	hdr = [ c.replace(" 0", "").strip().lower() for c in statsf.next().strip().split(",")]
-    except:
-	raise  BadBayesOutput("Header Not Found")
-    datadict = {}	
-    d = ""
-    try:
-	d = statsf.next().strip().split(",")
-    except:
-	raise BadBayesOutput("Data Not Found")		
-    if len(d) != len(hdr):
-	raise BadBayesOutput("Data row is only partial")
-    used = {}
-    for h, v in izip(hdr, d):
-	if h not in used and v:
-	    datadict[h] = v
-	    used[h] = None	
-    statsf.close()
-    return datadict	
-
-
-def parseObs(obs):
-    """
-    The observation file is a tab delimited file. This can easily be
-    split and stored in memory.
-    default ordering
-    >species,nsam,nsites,tstv,gamma,gen,locuslow,locushigh,Nelow,Nehigh,SegSites,nucdiv,Haptypes,HapDiver,PairDiffs,TajimasD,F*,ExpHet   
-    """
-    
-    obsf = open(obs, "rU")
-    ObservationData.columns = map(string.strip, obsf.next().strip().lower().split("\t"))
-
-    obsl = [ObservationData( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
-    obsf.close()
-    return obsl
-
-
-def runBayeSSC(obs, time, par, outdir = ".", parname = "tmp.par"):
-    """
-    Execute BayeSSC and then parse the data generated by the run.
-    """
-    global BAYESSC_PATH
-    fpath = os.path.join(outdir, parname)
-    o = open(fpath, "w")
-    o.write(par.__str__())
-    o.close()
-    #print "%s -f %s 1 &> /dev/null"%(BAYESSC_PATH, fpath)   
-    os.system("%s -f %s 1 &>/dev/null"%(BAYESSC_PATH, fpath))
-    data = parseBayeSSCOut(getStatsPath(fpath))
-    dmap = BayeSSCData(obs, time, data)
-    return dmap
-
-
-def prepareBayeSSC(obs, parData, time, LPType, PopType):
-    """
-    populate the par object with the correct values.  Also modify the timestamp base on data from obs file
-    #Num_label,No_Samples,No_BasePairs,per_transitions,gamma,Mutlow,Muthigh,gen,locuslow ,locushigh,Nelow,Nehigh,SegregatingSites,nucdiv,nhap,hapdiv,pair,TajD,FuF,nucdiv,ExpHet
-
-    """
-    chngtime = str( int( time / float(obs.gen)) )
-    par = copy.copy(parData)
-    par.setPopulation(PopType, obs.getPopRange())
-    par.setTime(chngtime)
-    par.setLociRate(LPType, obs.getMutationRange())
-    par.setgamma(obs.gamma)
-    par.setSampleSize(obs.nsam)
-    par.setLoci(obs.nsites)
-    par.setTSTV(obs.tstv)
-    return chngtime, par
-
-
-def exceuteBateSSCWIthRetry(obs, chngtime, par, outdir):
-    global RETRIES
-    attempts = 0
-    run = True
-    while run:
-        try:
-            row = runBayeSSC(obs, chngtime, par, outdir)
-            run = False
-            return row
-        except BadBayesOutput:
-            attempts += 1
-            if attempts >= RETRIES:
-                raise BadBayesOutput("Attempted to run BayeSSC %s times, each run resulted in an output error.", RETRIES)
-            print >> sys.stderr, "Error running bayeSSC.  Trying again"    
-    return None
-
-
-def generateCONSpecs(origParName, parData, observations, counts, timerange, outdir, LPType = "U", PopType = "U"):
-    """
-    Iterate all observations in the Congruent group and execute BayeSSC using that particular observation data
-    """
-    #congruent species
-    rows = []
-    time = float(generatedUniformTime(timerange) )   
-    for obs in observations:
-	counts[obs.label] += 1
-        chngtime, par = prepareBayeSSC(obs, parData, time, LPType, PopType)
-        row = exceuteBateSSCWIthRetry(obs, chngtime, par, outdir)
-        if row:
-            rows.append(row)
-    if len(rows) != len(observations):
-        raise BadBayesOutput("Did not generate an output for each observation")            
-    return rows, counts
-
-
-def generateRANDSpecs(origParName, parData, observations, timerange, outdir, LPType = "U", PopType = "U"):
-    """
-    Iterate all observations in the Random group and execute BayeSSC using that particular observation data.
-    A new timestamp is generated for each observations. 
-    """
-    rows = []
-    for obs in observations:
-        # for each observation, get a new time
-        # moved outside the while True, since it makes code consolidation easier
-        time = float(generatedUniformTime(timerange) )
-        chngtime, par = prepareBayeSSC(obs, parData, time, LPType, PopType)
-        row = exceuteBateSSCWIthRetry(obs, chngtime, par, outdir)
-        if row:
-            rows.append(row)
-    if len(rows) != len(observations):
-        raise BadBayesOutput("Did not generate an output for each observation")
-    return rows
-
-
+	def __generatedUniformTime(self, timerange):
+	    """
+	    generated a time value between the high and low value provided
+	    """
+	    return random.randint(min(timerange), max(timerange))
 
 
 def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
@@ -735,38 +550,211 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
     return map(str, stats)
     
 
-def performSingleModel(splitter, timerange, uid, outdir, parName, hyperstats, observations, repeats, LPType, par, con_species, obsCnt, counts, onlyHyperstats):
-    """
-    a model describes how many observations make up the congruent group.  for instance, model0, means we have no congruent observations.
-    This method is meant to contain all actions required to execute this script on a single model.  It will take that model, and
-    repeat the experiment multiple times, each time splitting the observations again and again.
-    """
-    print >> sys.stderr , ".",
-    if not onlyHyperstats:
-        o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations.csv"%(con_species, obsCnt, repeats)), "w")
-    for trial in xrange(int(repeats)):
-	conSpecs, randSpecs, observations = splitter.split(observations, con_species)
-	outstr = []
-	conspecData= []
-	randomData= []
-	index = "%s_%s_%s_%s_%s"%(uid, obsCnt, con_species, trial, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-	if conSpecs:
-	    rows, counts = generateCONSpecs(parName, par, conSpecs, counts, timerange, outdir, LPType = LPType)
-	    conspecData.extend(rows)
-	    outstr.append( "\t".join( ( str(r) for r in rows) ) )
-	if randSpecs:
-	    rows = generateRANDSpecs(parName, par, randSpecs, timerange, outdir, LPType = LPType)
-	    randomData.extend(rows)
-	    outstr.append( "\t".join( ( str(r) for r in rows) ) )
-	hyperstats.write( "%s,%s\n"%(index, "\t".join( computeStats(len(conSpecs), obsCnt, conspecData, randomData) )) )
-        if not onlyHyperstats:
-            o.write("%s,%s\n"%(index, "\t".join(outstr)))
-    if not onlyHyperstats:
-        o.close()
-        o = open(os.path.join(outdir, "con%s_total%s_-_%s_iterations_congruent_appearance.csv"%(con_species, obsCnt, repeats)), "w")
-        o.write("\n".join( ["\t".join(map(str, itm)) for itm in counts.iteritems() ] ) )
-        o.close()
+class BayeSSC(object):
 
+	def __init__(self, execpath, retries = 10):
+		self.execpath = execpath
+		self.retires = retries
+
+	def __parseBayeSSCOut(self, filePath):
+	    """
+	    takes the output fro BayeSSC and parses it so that we 
+	    """
+	    # with our assumption of 1 pop, combined and group 0 will be the same, so filter out the dup and store in a dict with the 0 removed
+	    statsf = open(filePath, "rU")
+	    try:
+		hdr = [ c.replace(" 0", "").strip().lower() for c in statsf.next().strip().split(",")]
+	    except:
+		raise  BadBayesOutput("Header Not Found")
+	    datadict = {}	
+	    d = ""
+	    try:
+		d = statsf.next().strip().split(",")
+	    except:
+		raise BadBayesOutput("Data Not Found")		
+	    if len(d) != len(hdr):
+		raise BadBayesOutput("Data row is only partial")
+	    used = {}
+	    for h, v in izip(hdr, d):
+		if h not in used and v:
+		    datadict[h] = v
+		    used[h] = None	
+	    statsf.close()
+	    return datadict	
+
+
+	def __getStatsPath(self, parPath):
+	    """
+	    convert the par file path into the bayessc stats file path
+	    """
+	#	parfile = os.path.split(parPath)[-1]
+	#	parfile = os.path.splitext(parfile)[0] + "_stat.csv"
+	#    return os.path.join(workdir, parfile)
+	    return os.path.splitext(parPath)[0] + "_stat.csv"
+
+
+	def runBayeSSC(self, obs, time, par, outdir = ".", parname = "tmp.par"):
+	    """
+	    Execute BayeSSC and then parse the data generated by the run.
+	    """
+	    fpath = os.path.join(outdir, parname)
+	    o = open(fpath, "w")
+	    o.write(par.__str__())
+	    o.close()
+	    os.system("%s -f %s 1 &>/dev/null"%(self.execpath, fpath))
+	    data = self.__parseBayeSSCOut(self.__getStatsPath(fpath))
+	    dmap = BayeSSCData(obs, time, data)
+	    return dmap
+
+	def exceuteBateSSCWIthRetry(self, obs, chngtime, par, outdir):
+	    attempts = 0
+	    run = True
+	    while run:
+		try:
+		    row = runBayeSSC(obs, chngtime, par, outdir)
+		    run = False
+		    return row
+		except BadBayesOutput:
+		    attempts += 1
+		    if attempts >= self.retires:
+			raise BadBayesOutput("Attempted to run BayeSSC %s times, each run resulted in an output error.", self.retires)
+		    print >> sys.stderr, "Error running bayeSSC.  Trying again"    
+	    return None
+
+
+class Model(object):
+	FIELD_DELIM = "\t"
+
+	def __init__(self, options, par, observations, totalObservations, splitter, timegen, bayessc):
+		self.splitter = splitter
+		self.par = par
+		self.observations = observations
+		self.obsCnt = totalObservations
+		self.options  = options	
+		self.indx =  "%s_%s_%%s_%%%%s_%%s"%(self.options.uid, self.obsCnt)
+		self.bayessc = bayessc
+		self.timeGenerator = timegen
+		
+		
+	def execute(self, modelNumber, hyperstatsOut = None, runDatOut = None):
+	   """
+	    a model describes how many observations make up the congruent group.  for instance, model0, means we have no congruent observations.
+	    This method is meant to contain all actions required to execute this script on a single model.  It will take that model, and
+	    repeat the experiment multiple times, each time splitting the observations again and again.
+	    """
+	    print >> sys.stderr , ".",
+	    indx = self.indx%(modelNumber, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+	    for trial in xrange(int(self.options.repeats)):
+		conSpecs, randSpecs = self.splitter.split(self.observations, modelNumber)
+		outstr = []
+		conspecData= []
+		randomData= []	
+		indx = indx%(trial)
+		if conSpecs:
+		    rows = self.__generateCONSpecs(self.options.par, self.par, conSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
+		    conspecData.extend(rows)
+		    outstr.append( Model.FIELD_DELIM.join( ( str(r) for r in rows) ) )
+		if randSpecs:
+		    rows = self.__generateRANDSpecs(self.options.par, self.par, randSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
+		    randomData.extend(rows)
+		    outstr.append( Model.FIELD_DELIM.join( ( str(r) for r in rows) ) )
+
+		hyperstatsOut.write( "%s%s%s\n"%(indx, Model.FIELD_DELIM, "\t".join( computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )) )
+		if runDatOut:
+		    runDatOut.write("%s%s%s\n"%(indx, Model.FIELD_DELIM, "\t".join(outstr)))
+		    
+
+	def __commonExec(self, obs parData, time, LPType, PopType, outdir, rows):
+		chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType)
+		row = self.bayessc.exceuteBateSSCWIthRetry(obs, chngtime, par, outdir)
+		if row:
+		    rows.append(row)
+		return rows
+
+
+	def __generateCONSpecs(self, origParName, parData, observations, timerange, outdir, LPType = "U", PopType = "U", timeGenerator = generatedUniformTime):
+	    """
+	    Iterate all observations in the Congruent group and execute BayeSSC using that particular observation data
+	    """
+	    #congruent species
+	    rows = []
+	    time = float(self.timeGenerator.generate(timerange) )   
+	    for obs in observations:
+	    	rows = self.__commonExec(obs parData, time, LPType, PopType, outdir, rows)
+	    if len(rows) != len(observations):
+		raise BadBayesOutput("Did not generate an output for each observation")            
+	    return rows
+
+
+	def __generateRANDSpecs(self, origParName, parData, observations, timerange, outdir, LPType = "U", PopType = "U", timeGenerator = generatedUniformTime):
+	    """
+	    Iterate all observations in the Random group and execute BayeSSC using that particular observation data.
+	    A new timestamp is generated for each observations. 
+	    """
+	    rows = []
+	    for obs in observations:
+		# for each observation, get a new time
+		# moved outside the while True, since it makes code consolidation easier
+		time = float(timeGenerator(timerange) )
+	    	rows = self.__commonExec(obs parData, time, LPType, PopType, chngtime, outdir, rows)
+	    if len(rows) != len(observations):
+		raise BadBayesOutput("Did not generate an output for each observation")
+	    return rows
+
+
+def prepareNewParFile(obs, parData, time, LPType, PopType):
+    """
+    populate the par object with the correct values.  Also modify the timestamp base on data from obs file
+    #Num_label,No_Samples,No_BasePairs,per_transitions,gamma,Mutlow,Muthigh,gen,locuslow ,locushigh,Nelow,Nehigh,SegregatingSites,nucdiv,nhap,hapdiv,pair,TajD,FuF,nucdiv,ExpHet
+
+    """
+    chngtime = str( int( time / float(obs.gen)) )
+    par = copy.copy(parData)
+    par.setPopulation(PopType, obs.getPopRange())
+    par.setTime(chngtime)
+    par.setLociRate(LPType, obs.getMutationRange())
+    par.setgamma(obs.gamma)
+    par.setSampleSize(obs.nsam)
+    par.setLoci(obs.nsites)
+    par.setTSTV(obs.tstv)
+    return chngtime, par
+
+
+def parseObs(obs):
+    """
+    The observation file is a tab delimited file. This can easily be
+    split and stored in memory.
+    default ordering
+    >species,nsam,nsites,tstv,gamma,gen,locuslow,locushigh,Nelow,Nehigh,SegSites,nucdiv,Haptypes,HapDiver,PairDiffs,TajimasD,F*,ExpHet   
+    """
+
+    obsf = open(obs, "rU")
+    ObservationData.columns = map(string.strip, obsf.next().strip().lower().split("\t"))
+
+    obsl = [ObservationData( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
+    obsf.close()
+    return obsl
+
+def is_exe(fpath):
+    # http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+def which(program):
+    # http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    """
+    Validate that the user provided path, does infact exist for BayeSSC
+    """
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None
 
 def main():
     """
@@ -777,28 +765,28 @@ def main():
     par = ParFile(options.par)
     observations = parseObs(options.obs)
     obsCnt = len(observations)
-    fname = "hyperstats_-_%s.txt"
-    if options.model == None:
-	fname = fname%("models_0-%s_-_%s_iterations"%(obsCnt, options.repeats))
-    else:
-	fname = fname%("model%s_of_%s"%(options.model, obsCnt))
+
     if options.makestats:
         obsStats = open(os.path.join(options.outdir,"hyperstats_-_observations.txt"), "w")
         index = "%s_%s_%s_%s_%s"%(options.uid, 0, 0, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-        obsStats.write( "%s\t%s\n"%(index, "\t".join( computeStats(0,obsCnt, obsData = observations) )) )
+        obsStats.write( "%s%s%s\n"%(index, Model.FIELD_DELIM, Model.FIELD_DELIM.join( computeStats(0,obsCnt, obsData = observations) )) )
         obsStats.close()
     
-    hyperstats = open(os.path.join(options.outdir, fname), "w")
-    counts = dict([ (obs.label, 0) for obs in observations])
-    
-    splitter = ObservationSplitter("uniform")
+    hyperstats = open(os.path.join(options.outdir, "hyperstats_iterations_%s.txt"), "w")
+    runData = None
+    if not self.options.onlyHyperstats:
+	    runData = open(os.path.join(options.outdir, "run_data_iterations_%s.csv"%(repeats)), "w")
+    processor = Model(options, par, con_species, obsCnt,ObservationSplitter("uniform"), TimeGenerator("uniform"), BayeSSC(options.bayesPath) )       
     if options.model == None:
-	for con_species in xrange(obsCnt + 1):
-	    for k in counts:
-		counts[k] = 0
-	    performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, con_species, obsCnt, counts, options.onlyHyperstats)
+	for modelNum in xrange(obsCnt + 1):
+	modelNumber, hyperstatsOut = None, runDatOut = None
+		processor.execute(modelNum, hyperstats)
     else:
-	performSingleModel(splitter, options.trange, options.uid, options.outdir, options.par, hyperstats, observations, options.repeats, options.LRType, par, options.model, obsCnt, counts, options.onlyHyperstats)
+	processor.execute(options.model)
+
+    hyperstats.close()
+    if runData:
+	runData.close()	
 
 	
 def commandlineArgs():
@@ -864,7 +852,6 @@ def commandlineArgs():
 	parser.print_help()
 	parser.error("Time range does not consist of valid integers")
     return options
-
 
 
 if __name__ == "__main__":
