@@ -483,7 +483,6 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
     elif obsData:
         # compute the stats for the observation file.  Computer only those that are identical to the hyperstats output
         for row in obsData:
-            print row
 	    statsdict = row.addStats(statsdict)
         stats = [float('NaN'), float('NaN'), float('NaN')]
     else:
