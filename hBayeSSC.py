@@ -255,11 +255,11 @@ class RunningStat(object):
 	if self.n == 0:
 	    return values
         try:
-            values[0] = "%f"%(self.Mean())
+            values[0] = "%.15f"%(self.Mean())
         except ZeroDivisionError:
             pass
         try:
-            values[1] = "%f"%(self.Variance())
+            values[1] = "%.15f"%(self.Variance())
         except ZeroDivisionError:
             pass
         return values
@@ -272,11 +272,11 @@ class RunningStat(object):
 	    return values	
 	values = self.collectMeanAndVariance(values)
         try:
-            values[2] = "%f"%(self.Skewness())
+            values[2] = "%.15f"%(self.Skewness())
         except ZeroDivisionError:
             pass
         try:
-            values[3] = "%f"%(self.Kurtosis())
+            values[3] = "%.15f"%(self.Kurtosis())
         except ZeroDivisionError:
             pass
         return values
@@ -371,7 +371,7 @@ class ParFile(object):
 	return " ".join([e.replace(" ", "") for e in ele])
 
     def setPopulation(self, distro, poprng):
-	self.popsize = ["{%s:%f,%f}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
+	self.popsize = ["{%s:%.15f,%.15f}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
     
     def setTime(self, time):
 	npop = []
@@ -382,7 +382,7 @@ class ParFile(object):
 	self.events = npop        
 
     def setLociRate(self, distro, locrng):
-	self.rate = "{%s:%f,%f}"%(distro, locrng[0], locrng[1])
+	self.rate = "{%s:%.15f,%.15f}"%(distro, locrng[0], locrng[1])
 
     def setLoci(self, lociCnt):
 	self.loci = lociCnt
@@ -392,12 +392,12 @@ class ParFile(object):
 
     def setTSTV(self, tstv):
 	v = self.type.split()
-	v[1] = "%f"%(float(tstv))
+	v[1] = "%.15f"%(float(tstv))
 	self.type = " ".join(v)
     
     def setgamma(self, gamma):
 	v = self.gamma.split()
-	v[0] = "%f"%(float(gamma))
+	v[0] = "%.15f"%(float(gamma))
 	self.gamma = " ".join(v)
     
     def matrixStr(self):
@@ -469,20 +469,20 @@ def mergeRunningStats(a, b):
     return combined
 
 
-def statsHeader(self):
+def statsHeader():
     return ['congruent_group_size', 'total_observations', 'model_pct',
-     'congruent_time_–_Mean', 'congruent_time_–_Dispersion',
-     'random_time_–_Mean', 'random_time_–_Dispersion',
-     'overall_time_–_Mean', 'overall_time_–_Dispersion',
-     'ne_-_Mean', 'ne_-_Variance',
-     'expan_-_Mean', 'expan_-_Variance',
-     'mu_-_Mean', 'mu_-_Variance',
-     'haptypes_–_Mean', 'haptypes_–_Variance', 'haptypes_–_Skewness', 'haptypes_–_Kurtosis',
-     'hapdiv_–_Mean', 'hapdiv_–_Variance', 'hapdiv_–_Skewness', 'hapdiv_–_Kurtosis',
-     'nucdiv_–_Mean', 'nucdiv_–_Variance', 'nucdiv_–_Skewness', 'nucdiv_–_Kurtosis',
-     'tajimasd_–_Mean', 'tajimasd_–_Variance', 'tajimasd_–_Skewness', 'tajimasd_–_Kurtosis',
-     'fusf_–_Mean', 'fusf_–_Variance', 'fusf_–_Skewness', 'fusf_–_Kurtosis',	
-     'pairDiffs_–_Mean', 'pairDiffs_–_Variance', 'pairDiffs_–_Skewness', 'pairDiffs_–_Kurtosis']
+     'congruent_time_Mean', 'congruent_time_Dispersion',
+     'random_time_Mean', 'random_time_Dispersion',
+     'overall_time_Mean', 'overall_time_Dispersion',
+     'ne_Mean', 'ne_Variance',
+     'expan_Mean', 'expan_Variance',
+     'mu_Mean', 'mu_Variance',
+     'haptypes_Mean', 'haptypes_Variance', 'haptypes_Skewness', 'haptypes_Kurtosis',
+     'hapdiv_Mean', 'hapdiv_Variance', 'hapdiv_Skewness', 'hapdiv_Kurtosis',
+     'nucdiv_Mean', 'nucdiv_Variance', 'nucdiv_Skewness', 'nucdiv_Kurtosis',
+     'tajimasd_Mean', 'tajimasd_Variance', 'tajimasd_Skewness', 'tajimasd_Kurtosis',
+     'fusf_Mean', 'fusf_Variance', 'fusf_Skewness', 'fusf_Kurtosis',	
+     'pairDiffs_Mean', 'pairDiffs_Variance', 'pairDiffs_Skewness', 'pairDiffs_Kurtosis']
 
 def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
     """ Using the collect data from multipl repeats, compute some statistics on particular data columns """
@@ -497,7 +497,7 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
 	    statsdict = row.addStats(statsdict)
             statsdict['rndtime'].Push(row.time)
         statsdict['overalltime'] = mergeRunningStats( statsdict['rndtime'], statsdict['contime'])
-        stats = [congruentCnt, total, float(congruentCnt) / float(total) ]             
+        stats = [congruentCnt, total, "%.15f"%(float(congruentCnt) / float(total)) ]             
     elif obsData:
         # compute the stats for the observation file.  Computer only those that are identical to the hyperstats output
         for row in obsData:
@@ -744,7 +744,7 @@ def commandlineArgs():
     parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
     parser.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
     parser.add_option("", "--only_hyperstats", action="store_true", dest="onlyHyperstats", default=False, help="When set, will only generate the hyperstats file")
-    parser.add_option("", "--pint_headers", action="store_true", dest="headers", default=False, help="When set will generate a headers.txt and exit")
+    parser.add_option("", "--print_headers", action="store_true", dest="headers", default=False, help="When set will generate a headers.txt and exit")
 
     (options, args) = parser.parse_args()    
 
