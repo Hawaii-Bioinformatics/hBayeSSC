@@ -176,6 +176,9 @@ class BayeSSCData(CommonData):
 	statsdict['expan'].Push(self.expan)
         #print self.ne
 	return statsdict
+    
+    def header(self):
+	return ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
 
     def __str__(self):
         return "\t".join(map(str, [self.label,
@@ -466,6 +469,21 @@ def mergeRunningStats(a, b):
     return combined
 
 
+def statsHeader(self):
+    return ['congruent_group_size', 'total_observations', 'model_pct',
+     'congruent_time_–_Mean', 'congruent_time_–_Dispersion',
+     'random_time_–_Mean', 'random_time_–_Dispersion',
+     'overall_time_–_Mean', 'overall_time_–_Dispersion',
+     'ne_-_Mean', 'ne_-_Variance',
+     'expan_-_Mean', 'expan_-_Variance',
+     'mu_-_Mean', 'mu_-_Variance',
+     'haptypes_–_Mean', 'haptypes_–_Variance', 'haptypes_–_Skewness', 'haptypes_–_Kurtosis',
+     'hapdiv_–_Mean', 'hapdiv_–_Variance', 'hapdiv_–_Skewness', 'hapdiv_–_Kurtosis',
+     'nucdiv_–_Mean', 'nucdiv_–_Variance', 'nucdiv_–_Skewness', 'nucdiv_–_Kurtosis',
+     'tajimasd_–_Mean', 'tajimasd_–_Variance', 'tajimasd_–_Skewness', 'tajimasd_–_Kurtosis',
+     'fusf_–_Mean', 'fusf_–_Variance', 'fusf_–_Skewness', 'fusf_–_Kurtosis',	
+     'pairDiffs_–_Mean', 'pairDiffs_–_Variance', 'pairDiffs_–_Skewness', 'pairDiffs_–_Kurtosis']
+
 def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
     """ Using the collect data from multipl repeats, compute some statistics on particular data columns """
     statsdict = dict(expan = RunningStat(), mu = RunningStat(), ne = RunningStat(), contime = RunningStat(), 
@@ -487,7 +505,7 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
         stats = [float('NaN'), float('NaN'), float('NaN')]
     else:
         raise BadBayesOutput("No observation data, congruent data or random data found to compute stats on")
-    stats.extend(chain( *[ [statsdict[k].Mean(), statsdict[k].Dispersion() ] for k in ['overalltime', 'contime', 'rndtime']] ))
+    stats.extend(chain( *[ [statsdict[k].Mean(), statsdict[k].Dispersion() ] for k in ['contime', 'rndtime', 'overalltime']] ))
     stats.extend(chain( *[ statsdict[k].collectMeanAndVariance() for k in ['ne', 'expan', 'mu']] ))
     stats.extend(chain( *[statsdict[k].collectStats() for k in ['haps', 'hapdiv', 'nucdiv', 'tajd', 'fusf', 'pair']] ))
     return map(str, stats)
@@ -588,9 +606,9 @@ class Model(object):
                 randomData.extend(rows)
                 outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
 
-            hyperstatsOut.write( "%s%s%s\n"%(indx, Model.FIELD_DELIM, "\t".join( computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )) )
+	    print >> hyperstatsOut, Model.FIELD_DELIM.join( [indx] + computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )
             if runDatOut:
-                runDatOut.write("%s%s%s\n"%(indx, Model.FIELD_DELIM, "\t".join(outstr)))
+                print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
 
     def __commonExec(self, obs, parData, time, LPType, PopType, outdir, rows):
         chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType)
@@ -686,8 +704,8 @@ def main():
     if options.makestats:
         obsStats = open(os.path.join(options.outdir,"hyperstats_observations.txt"), "w")
         index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-        obsStats.write( "%s%s%s\n"%(index, Model.FIELD_DELIM, Model.FIELD_DELIM.join( computeStats(0, obsCnt, obsData = observations) )) )
-        obsStats.close()
+        print >> obsStats, Model.FIELD_DELIM.join( [index] + computeStats(0, obsCnt, obsData = observations) )
+	obsStats.close()
     
     hyperstats = open(os.path.join(options.outdir, "hyperstats_iterations_%s.txt"%(options.repeats)), "w")
     runData = None
@@ -726,9 +744,22 @@ def commandlineArgs():
     parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
     parser.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
     parser.add_option("", "--only_hyperstats", action="store_true", dest="onlyHyperstats", default=False, help="When set, will only generate the hyperstats file")
+    parser.add_option("", "--pint_headers", action="store_true", dest="headers", default=False, help="When set will generate a headers.txt and exit")
 
     (options, args) = parser.parse_args()    
-    
+
+    if options.headers:
+	print "Generating header file"
+	bayshdr = ['index'] + BayeSSCData().header()
+	hyperhdr = ['index'] + statsHeader()
+	o = open("headers.txt", "w")
+	print >> o , "Iteration file header"
+	print >> o, Model.FIELD_DELIM.join(bayshdr)
+	print >> o, "\nHyperstats file header"
+	print >> o, Model.FIELD_DELIM.join(hyperhdr)
+	o.close()
+	sys.exit()
+
     if not options.par:
 	parser.print_help()
 	parser.error("par file is required")
