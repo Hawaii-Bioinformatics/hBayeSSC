@@ -15,7 +15,7 @@ if len(sys.argv) != 5:
     print "USAGE: %s <UID list/hyperstats file> <Iteration data> <filtered output> <counts output>"%(sys.argv[0])
     sys.exit(0)
 
-UIDs = dict([ (i.strip().split("\t")[0], None ) for i in open(sys.argv[1])])
+UIDs = dict([ (i.strip().split("\t")[0], None ) for i in open(sys.argv[1], "rU")])
 
 counts = {}
 fout = open(sys.argv[3], "w")
@@ -35,8 +35,6 @@ for l in open(sys.argv[2]):
         if x not in counts:
             counts[x] = 0
         counts[x] += 1
-        print "x"
-    print "-"*80
 fout.close()
 fout = open(sys.argv[4], "w")
 print >> fout, "\n".join([ "%s\t%s"%(j,k) for j, k in counts.iteritems()])
