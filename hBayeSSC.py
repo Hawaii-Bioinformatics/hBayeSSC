@@ -163,7 +163,7 @@ class BayeSSCData(CommonData):
         - statsdata is the data generated in the *_stat.csv from BayeSSC
         - time is a random int, between 2 user defined values.
         """
-	super(BayeSSCData, self).fill(obsData.label, obsData.nsam, obsData.nsites, statsData, statsData.get('nucltddiv', float("NaN") )) 
+	super(BayeSSCData, self).fill(obsData.label, obsData.nsam, obsData.nsites, statsData, statsData.get('nucltddiv', float("NaN") ))
 	self.ne = statsData['deme size']
 	self.expan = statsData['event size']
 	self.mu = statsData['mutation rate']
@@ -171,6 +171,7 @@ class BayeSSCData(CommonData):
 
     def addStats(self, statsdict):
 	statsdict = super(BayeSSCData, self).addStats(statsdict)
+
 	statsdict['mu'].Push(self.mu)
 	statsdict['ne'].Push(self.ne)
 	statsdict['expan'].Push(self.expan)
@@ -505,8 +506,14 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
         stats = [float('NaN'), float('NaN'), float('NaN')]
     else:
         raise BadBayesOutput("No observation data, congruent data or random data found to compute stats on")
+
     stats.extend(chain( *[ [statsdict[k].Mean(), statsdict[k].Dispersion() ] for k in ['contime', 'rndtime', 'overalltime']] ))
-    stats.extend(chain( *[ statsdict[k].collectMeanAndVariance() for k in ['ne', 'expan', 'mu']] ))
+    tmp = []
+    for k in  ['ne', 'expan', 'mu']:
+        v = [float('nan'), float('nan')]
+        v  = statsdict[k].collectMeanAndVariance(v)
+        tmp.append(v)
+    stats.extend(chain( *tmp))
     stats.extend(chain( *[statsdict[k].collectStats() for k in ['haps', 'hapdiv', 'nucdiv', 'tajd', 'fusf', 'pair']] ))
     return map(str, stats)
     
