@@ -413,7 +413,7 @@ class ParFile(object):
 	return "\n".join(self.events)
 
     def __str__(self):       
-	return """//Number of population samples - tmp\n%s\n//Population sizes\n%s\n//Sample sizes\n%s\nGrowth rates\n%s\n//Number of migration matrices : If 0 : No migration between demes\n%s\n//Historical event format:\n%s\n%s\n//mutation rate\n%s\n//Number of independent loci\n%s\n//Data type, num loci, rec.rate, mut rate, gamma, shape\n%s\n//\n%s\n"""%(
+	return """//Number of population samples - tmp\n%s\n//Population sizes\n%s\n//Sample sizes\n%s\n//Growth rates\n%s\n//Number of migration matrices : If 0 : No migration between demes\n%s\n//Historical event format:\n%s\n%s\n//mutation rate\n%s\n//Number of independent loci\n%s\n//Data type, num loci, rec.rate, mut rate, gamma, shape\n%s\n//\n%s\n"""%(
                 self.popcnt, "\n".join(self.popsize), self.sSize, self.growth, self.matrixStr(), self.eCnt, self.eventStr(), self.rate, self.loci, self.type, self.gamma)
 
 
