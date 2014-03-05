@@ -23,6 +23,22 @@ from optparse import OptionParser
 
 
 """
+--note that we are not changing ==anything== in the runs.  we just want to run a specific set of params.--
+epic888, 3/3/2014 10:23:04 PM:
+It looks like you write out the time, mutation rate, expansion..
+
+David S, 3/3/2014 10:41:51 PM:
+1. modify the hbayessc so that it can take a UID list  (or  posterior file) and a data_run file
+
+David S, 10:42:10 PM:
+2. generate new par files using the exact parameters define din the data_run file per given UID
+
+David S, 10:42:36 PM:
+3. run bayessc for 1 iteration and make a new hyperstats (allow N iterations)
+
+
+
+
 # script to count appearances from hyperstats or UID list
 # script to pull specific models by UID
 
@@ -413,7 +429,7 @@ class ParFile(object):
 	return "\n".join(self.events)
 
     def __str__(self):       
-	return """//Number of population samples - tmp\n%s\n//Population sizes\n%s\n//Sample sizes\n%s\nGrowth rates\n%s\n//Number of migration matrices : If 0 : No migration between demes\n%s\n//Historical event format:\n%s\n%s\n//mutation rate\n%s\n//Number of independent loci\n%s\n//Data type, num loci, rec.rate, mut rate, gamma, shape\n%s\n//\n%s\n"""%(
+	return """//Number of population samples - tmp\n%s\n//Population sizes\n%s\n//Sample sizes\n%s\n//Growth rates\n%s\n//Number of migration matrices : If 0 : No migration between demes\n%s\n//Historical event format:\n%s\n%s\n//mutation rate\n%s\n//Number of independent loci\n%s\n//Data type, num loci, rec.rate, mut rate, gamma, shape\n%s\n//\n%s\n"""%(
                 self.popcnt, "\n".join(self.popsize), self.sSize, self.growth, self.matrixStr(), self.eCnt, self.eventStr(), self.rate, self.loci, self.type, self.gamma)
 
 
@@ -617,8 +633,8 @@ class Model(object):
             if runDatOut:
                 print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
 
-    def __commonExec(self, obs, parData, time, LPType, PopType, outdir, rows):
-        chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType)
+    def __commonExec(self, obs, parData, time, LPType, PopType, outdir, rows, modifyTime = True):
+        chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime)
         row = self.bayessc.exceuteBateSSCWithRetry(obs, chngtime, par, outdir)
         if row:
             rows.append(row)
@@ -648,9 +664,58 @@ class Model(object):
         return rows
 
 
-def prepareNewParFile(obs, parData, time, LPType, PopType):
+class PostModel(Model):
+    
+    def __init__(self,options, par, conSpecs, conSpecsTimes, randSpecs, randSpecsTimes, bayessc):	
+	super(PostModel, self).__init__(options, par, None, len(conSpecs) + len(randSpecs), None, None, bayessc)
+	self.conSpecs = conSpecs
+	self.conSpecsTimes = conSpecsTimes
+	self.randSpecs = randSpecs
+	self.randSpecsTimes= randSpecsTimes
+	
+   def __generatePOST(self, origParName, parData, observations, times, outdir, LPType = "U", PopType = "U"):
+	""" Iterate all observations in the Congruent group and execute BayeSSC using that particular observation data """
+	rows = []
+	for obs, time in izip(observations, times):
+	    rows = self.__commonExec(obs, parData, time, LPType, PopType, outdir, rows, False)
+	if len(rows) != len(observations):
+	    raise BadBayesOutput("Did not generate an output for each observation")            
+	return rows	
+	
+    def execute(self, modelNumber, hyperstatsOut = None, runDatOut = None):
+        """
+        a model describes how many observations make up the congruent group.  for instance, model0, means we have no congruent observations.
+        This method is meant to contain all actions required to execute this script on a single model.  It will take that model, and
+        repeat the experiment multiple times, each time splitting the observations again and again.
+        """
+        print >> sys.stderr , ".",
+        indx_raw = self.indx%(modelNumber, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+        for trial in xrange(int(self.options.repeats)):
+            outstr = []
+            conspecData= []
+            randomData= []
+            indx = indx_raw%(trial)
+            if conSpecs:
+                rows = self.__generatePOST(self.options.par, self.par, self.conSpecs, self.conSpecsTimes, self.options.outdir)
+                conspecData.extend(rows)
+                outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
+            if randSpecs:
+                rows = self.__generatePOST(self.options.par, self.par, self.randSpecs, self.randSpecsTimes, self.options.outdir)
+                randomData.extend(rows)
+                outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
+
+	    print >> hyperstatsOut, Model.FIELD_DELIM.join( [indx] + computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )
+            if runDatOut:
+                print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
+	
+	
+
+def prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime = True):
     """ populate the par object with the correct values.  Also modify the timestamp base on data from obs file """
-    chngtime = str( int( time / float(obs.gen)) )
+    if modifyTime:
+	chngtime = str( int( time / float(obs.gen)) )
+    else:
+	chngtime = str(time)
     par = copy.copy(parData)
     par.setPopulation(PopType, obs.getPopRange())
     par.setTime(chngtime)
@@ -698,16 +763,12 @@ def which(program):
     return None
 
 
-def main():
+def main_init(options, par):
     """
-    Main loop of the appliocation
-    drives how the program executes (only 1 model, or multiple models).
+    main loop specific to the initial mode of the program
     """
-    options = commandlineArgs()
-    par = ParFile(options.par)
     observations = parseObs(options.obs)
     obsCnt = len(observations)
-    #if options.model:
     if options.makestats:
         obsStats = open(os.path.join(options.outdir,"hyperstats_observations.txt"), "w")
         index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
@@ -733,6 +794,100 @@ def main():
     if runData:
 	runData.close()	
 
+
+def selectRuns(uidlst, run_dat):
+    uids = dict([(l.strip().split()[0], None,) for l in open(uidlst, "rU")])
+    rundat = open(run_dat, "rU")
+    parsedData = []
+    for l in rundat:
+	line = l.strip().split()
+	if line[0] not in uids:
+	    continue
+	uid = line[0]
+	line = line[1:]
+	start = 0
+	end = 14
+	cnt = len(line) / 14
+	step = 14
+	obs = []
+	for x in xrange(cnt):
+	    obs.append(line[start:end])
+	    start = end
+	    end +=  step
+	model = uid.split("_")[2]
+	parsedData.append([ model, obs[:model], obs[model:] ] )
+    return parsedData
+
+
+def main_post(options, par):
+    """
+    main loop specific to the posterior mode of the program
+    """
+    observations = parseObs(options.obs)
+    #TODO: parse the run_data and the UID list to select what to process
+    conspecs, randspecs = selectRuns(options.uidlst, options.run_dat)
+    
+    
+    obsCnt = len(observations)    
+    hyperstats = open(os.path.join(options.outdir, "hyperstats_iterations_%s.txt"%(options.repeats)), "w")
+    runData = None
+    if not options.onlyHyperstats:
+	    runData = open(os.path.join(options.outdir, "run_data_iterations_%s.csv"%(options.repeats)), "w")
+    #index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+    processor = PostModel(options, par, conSpecs, conSpecsTimes, randSpecs, randSpecsTimes, BayeSSC(options.bayesPath) )          
+    processor.execute(model, hyperstats, runData)
+
+    hyperstats.close()
+    if runData:
+	runData.close()	
+
+
+def main():
+    """
+    Main loop of the appliocation
+    drives how the program executes (only 1 model, or multiple models).
+    """
+    options = commandlineArgs()
+    par = ParFile(options.par)
+    if options.mode == 'initial':
+	main_init(options, par)
+    elif options.mode == 'posterior':
+	main_post(options, par)
+    else:
+	pass
+
+
+
+def mode_init(parser, options, args):
+     if not options.trange:
+	 parser.print_help()
+	 parser.error("Time range is required")
+     if options.trange.find(".") != -1:
+	 parser.print_help()
+	 parser.error("Time range must consist of only integers")
+     options.trange = options.trange.split(":")
+     if len(options.trange) != 2:
+	 parser.print_help()
+	 parser.error("Time range  must be provided in the following format:  <lowerbounds>:<upperbounds> Example: 1000:20000")
+     try:
+	 options.trange = map(int, options.trange)
+     except:
+	 parser.print_help()
+	 parser.error("Time range does not consist of valid integers")    
+    return (options, args,)
+    
+
+def mode_post(parser, options, args):
+    if not options.uidlst:
+	parser.print_help()
+	parser.error("UID list file is required")
+    if not options.run_dat:
+	parser.print_help()
+	parser.error("Run data file is required")  
+    return (options, args,)
+    
+
+
 	
 def commandlineArgs():
     """
@@ -740,32 +895,48 @@ def commandlineArgs():
     """
     global BAYESSC_PATH
     parser = OptionParser("%prog [options]")
+
+    parser.add_option("", "--mode", dest = "mode", help = "program operation mode [required]", action = "store", type = "string", choices = [ 'initial', 'posterior' ] )
     parser.add_option("-p", "--par", dest = "par", help = "par file template [required]", action = "store", type = "string", metavar = "FILE")
     parser.add_option("-i", "--obs", dest = "obs", help = "Observation file [required]", action = "store", type = "string", metavar = "FILE")
     parser.add_option("-r", "--repeat", dest = "repeats", help = "Number of times to try a given congruent group size [required]", action = "store", type = "int", metavar = "NUM")
-    parser.add_option("-m", "--model", dest = "model", help = "Run a single model (0 to total entries in observation file) [default: run all models] ", action = "store", type = "int", metavar = "MODEL", default = None)
     parser.add_option("-u", "--uid", dest = "uid", help = "Unique ID to prefix generated indices [required]", action = "store", type = "string", metavar = "UID")
-    parser.add_option("-l", "--LPType", dest = "LPType", help = "Loci Rate Priori Type", action = "store", type = "choice", choices = ["U"], default = "U", metavar = "TYPE")
-    parser.add_option("-o", "--outdir", dest = "outdir", help = "Directory to generate final outputs in (will create missing folders) [default: %default]", action = "store", type = "string", metavar = "PATH", default = os.getcwd())
-    parser.add_option("-t", "--timerange", dest= "trange", help = "The range of values to select the time from (Integers). Example: 1000:20000  [required]", action = "store", type = "string", metavar ="RANGE")
     parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
-    parser.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
     parser.add_option("", "--only_hyperstats", action="store_true", dest="onlyHyperstats", default=False, help="When set, will only generate the hyperstats file")
     parser.add_option("", "--print_headers", action="store_true", dest="headers", default=False, help="When set will generate a headers.txt and exit")
+    parser.add_option("-o", "--outdir", dest = "outdir", help = "Directory to generate final outputs in (will create missing folders) [default: %default]", action = "store", type = "string", metavar = "PATH", default = os.getcwd())
+
+
+    init_group = OptionGroup(parser, "Regular Run", "Options to be applied during mode 'initial'")
+    
+    init_group.add_option("-m", "--model", dest = "model", help = "Run a single model (0 to total entries in observation file) [default: run all models] ", action = "store", type = "int", metavar = "MODEL", default = None)
+    init_group.add_option("-l", "--LPType", dest = "LPType", help = "Loci Rate Priori Type", action = "store", type = "choice", choices = ["U"], default = "U", metavar = "TYPE")
+    init_group.add_option("-t", "--timerange", dest= "trange", help = "The range of values to select the time from (Integers). Example: 1000:20000  [required]", action = "store", type = "string", metavar ="RANGE")
+    init_group.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
+
+    parser.add_option_group(init_group)    
+
+    post_group = OptionGroup(parser, "Posterior Run", "Options to be applied during mode 'posterior'")   
+
+    post_group.add_option("", "--uid_list", action="store", dest="uidlst", default="", type = "string", metavbar = "FILE", help="Speccifies a list of UIDs to filter on for Posterior processing [required]")
+    post_group.add_option("", "--run_data", action="store", dest="run_dat", default="", type = "string", metavar = "FILE", help="run data which contains the --uid_list UIDs.  It is used for the Posterior processing [required]")
+
+    parser.add_option_group(post_group)    
 
     (options, args) = parser.parse_args()    
 
     if options.headers:
-	print "Generating header file"
-	bayshdr = ['index'] + BayeSSCData().header()
-	hyperhdr = ['index'] + statsHeader()
-	o = open("headers.txt", "w")
-	print >> o , "Iteration file header"
-	print >> o, Model.FIELD_DELIM.join(bayshdr)
-	print >> o, "\nHyperstats file header"
-	print >> o, Model.FIELD_DELIM.join(hyperhdr)
-	o.close()
-	sys.exit()
+	 print "Generating header file"
+	 bayshdr = ['index'] + BayeSSCData().header()
+	 hyperhdr = ['index'] + statsHeader()
+	 o = open("headers.txt", "w")
+	 print >> o , "Iteration file header"
+	 print >> o, Model.FIELD_DELIM.join(bayshdr)
+	 print >> o, "\nHyperstats file header"
+	 print >> o, Model.FIELD_DELIM.join(hyperhdr)
+	 o.close()
+	 sys.exit()
+
 
     if not options.par:
 	parser.print_help()
@@ -794,22 +965,16 @@ def commandlineArgs():
     if not BAYESSC_PATH:
 	parser.print_help()
 	parser.error("BayeSSC application not found at supplied path: '%s'" %(options.bayesPath))
-    if not options.trange:
+
+    if options.mode == 'initial':
+	options, args = mode_init(parser, options, args)
+    elif options.mode == 'posterior':
+	options, args = mode_post(parser, options, args)
+    else:
 	parser.print_help()
-	parser.error("Time range is required")
-    if options.trange.find(".") != -1:
-	parser.print_help()
-	parser.error("Time range must consist of only integers")
-    options.trange = options.trange.split(":")
-    if len(options.trange) != 2:
-	parser.print_help()
-	parser.error("Time range  must be provided in the following format:  <lowerbounds>:<upperbounds> Example: 1000:20000")
-    try:
-	options.trange = map(int, options.trange)
-    except:
-	parser.print_help()
-	parser.error("Time range does not consist of valid integers")
-    return options
+	parser.error("Mode must be either 'initial' or 'posterior'")
+	
+    return options, 
 
 
 if __name__ == "__main__":
