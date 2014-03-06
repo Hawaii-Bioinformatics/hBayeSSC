@@ -19,7 +19,7 @@ except:
     def isinf(val):
         return val == float('-inf') or val == float('inf')
 
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 
 """
@@ -100,6 +100,9 @@ class CommonData(object):
 	self.hapdiv = data.get('hapdiver', float("NaN") )
 	self.tajd = data.get('tajimasd', float("NaN") )
 	self.fusf = data.get('f*', float("NaN") )
+    
+    def getlabel(self):
+	return self.label
 
     def addStats(self, statsdict):
 	statsdict['haps'].Push(self.haps)
@@ -161,8 +164,36 @@ class ObservationData(CommonData):
                                   self.nucdiv, self.haps, self.hapdiv, self.pair, 
                                   self.tajd, self.fusf, self.exphet]) )
 
+class PostObservationData(ObservationData):
+    """ Represents a row in the Observeration file """
+    # default column order
+    def __init__(self, data = None):
+	super(PostObservationData,self).__init__(data)
+	self.pop =0
+	self.expan = 0
+	self.mutate = 0
+	self.time = 0
 
+    def setPop(self, pop):
+	self.pop = float(pop)
+    def setMutationRate(self, mutate):
+	self.mutate = float(mutate)
+    def setExpan(self, expan):
+	self.expan = float(expan)
+    def setTime(self, tm):
+	self.time = int(tm)
+
+    def getTime(self):
+	return self.time
+    def getPop(self):
+	return self.pop
+    def getMutationRate(self):
+	return self.mutate
+    def getExpan(self):
+	return self.expan
+    
 class BayeSSCData(CommonData):
+    HEADERS = ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
     """Represents a row in the BayeSSC stats file """
     def __init__(self, obs = None, time = None, data = None):
 	super(BayeSSCData, self).__init__()
@@ -180,10 +211,17 @@ class BayeSSCData(CommonData):
         - time is a random int, between 2 user defined values.
         """
 	super(BayeSSCData, self).fill(obsData.label, obsData.nsam, obsData.nsites, statsData, statsData.get('nucltddiv', float("NaN") ))
-	self.ne = statsData['deme size']
-	self.expan = statsData['event size']
-	self.mu = statsData['mutation rate']
+	self.ne = statsData.get('deme size', None)
+	self.expan = statsData.get('event size', None)
+	self.mu = statsData.get('mutation rate', None)
 	self.time = time
+    
+    def setNE(self, ne):
+	self.ne = ne
+    def setExpan(self, expan):
+	self.expan = expan
+    def setMU(self, mu):
+	self.mu = mu
 
     def addStats(self, statsdict):
 	statsdict = super(BayeSSCData, self).addStats(statsdict)
@@ -195,7 +233,7 @@ class BayeSSCData(CommonData):
 	return statsdict
     
     def header(self):
-	return ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
+	return BayeSSCData.HEADERS
 
     def __str__(self):
         return "\t".join(map(str, [self.label,
@@ -387,6 +425,20 @@ class ParFile(object):
 	    ele.append(buf)
 	return " ".join([e.replace(" ", "") for e in ele])
 
+    def setStaticPop(self, pop):
+	 self.popsize = ["%.15f"%(pop) for r in self.popsize]
+
+    def setExpan(self, expan):
+	npop = []
+	for r in self.events:
+	    ele = r.split()
+	    ele[4] = "%.15f"%(expan)
+	    npop.append(" ".join(ele))
+	self.events = npop   
+    
+    def setStaticLociRate(self, locirate):
+	self.rate = "%.15f"%(locirate)
+	
     def setPopulation(self, distro, poprng):
 	self.popsize = ["{%s:%.15f,%.15f}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
     
@@ -394,7 +446,7 @@ class ParFile(object):
 	npop = []
 	for r in self.events:
 	    ele = r.split()
-	    ele[0] = time
+	    ele[0] = str(time)
 	    npop.append(" ".join(ele))
 	self.events = npop        
 
@@ -581,6 +633,7 @@ class BayeSSC(object):
         o.close()
         os.system("%s -f %s 1 2>/dev/null >/dev/null"%(self.execpath, fpath))
         data = self.__parseBayeSSCOut(self.__getStatsPath(fpath))
+	
         return BayeSSCData(obs, ctime, data)
 
     def exceuteBateSSCWithRetry(self, obs, chngtime, par, outdir):
@@ -633,7 +686,7 @@ class Model(object):
             if runDatOut:
                 print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
 
-    def __commonExec(self, obs, parData, time, LPType, PopType, outdir, rows, modifyTime = True):
+    def _commonExec(self, obs, parData, time, LPType, PopType, outdir, rows, modifyTime = True):
         chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime)
         row = self.bayessc.exceuteBateSSCWithRetry(obs, chngtime, par, outdir)
         if row:
@@ -645,7 +698,7 @@ class Model(object):
         rows = []
         time = float(self.timeGenerator.generate(timerange) )   
         for obs in observations:
-            rows = self.__commonExec(obs, parData, time, LPType, PopType, outdir, rows)
+            rows = self._commonExec(obs, parData, time, LPType, PopType, outdir, rows)
         if len(rows) != len(observations):
             raise BadBayesOutput("Did not generate an output for each observation")            
         return rows
@@ -658,26 +711,28 @@ class Model(object):
         rows = []
         for obs in observations:
             time = float(timeGenerator.generate(timerange) )
-            rows = self.__commonExec(obs, parData, time, LPType, PopType, outdir, rows)
+            rows = self._commonExec(obs, parData, time, LPType, PopType, outdir, rows)
         if len(rows) != len(observations):
             raise BadBayesOutput("Did not generate an output for each observation")
         return rows
 
 
-class PostModel(Model):
-    
-    def __init__(self,options, par, conSpecs, conSpecsTimes, randSpecs, randSpecsTimes, bayessc):	
+class PostModel(Model):    
+    def __init__(self,options, par, conSpecs, randSpecs, bayessc):	
 	super(PostModel, self).__init__(options, par, None, len(conSpecs) + len(randSpecs), None, None, bayessc)
 	self.conSpecs = conSpecs
-	self.conSpecsTimes = conSpecsTimes
 	self.randSpecs = randSpecs
-	self.randSpecsTimes= randSpecsTimes
 	
-   def __generatePOST(self, origParName, parData, observations, times, outdir, LPType = "U", PopType = "U"):
+    def __generatePOST(self, origParName, parData, observations, outdir, LPType = "U", PopType = "U"):
 	""" Iterate all observations in the Congruent group and execute BayeSSC using that particular observation data """
 	rows = []
-	for obs, time in izip(observations, times):
-	    rows = self.__commonExec(obs, parData, time, LPType, PopType, outdir, rows, False)
+	for obs in observations:
+	    pre = len(rows)
+	    rows = self._commonExec(obs, parData, obs.getTime(), LPType, PopType, outdir, rows, False)
+	    if len(rows) != pre:
+		rows[-1].setNE(obs.getPop())
+		rows[-1].setMU(obs.getMutationRate())
+		rows[-1].setExpan(obs.getExpan())
 	if len(rows) != len(observations):
 	    raise BadBayesOutput("Did not generate an output for each observation")            
 	return rows	
@@ -695,16 +750,16 @@ class PostModel(Model):
             conspecData= []
             randomData= []
             indx = indx_raw%(trial)
-            if conSpecs:
-                rows = self.__generatePOST(self.options.par, self.par, self.conSpecs, self.conSpecsTimes, self.options.outdir)
+            if self.conSpecs:
+                rows = self.__generatePOST(self.options.par, self.par, self.conSpecs, self.options.outdir)
                 conspecData.extend(rows)
                 outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
-            if randSpecs:
-                rows = self.__generatePOST(self.options.par, self.par, self.randSpecs, self.randSpecsTimes, self.options.outdir)
+            if self.randSpecs:
+                rows = self.__generatePOST(self.options.par, self.par, self.randSpecs, self.options.outdir)
                 randomData.extend(rows)
                 outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
 
-	    print >> hyperstatsOut, Model.FIELD_DELIM.join( [indx] + computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )
+	    print >> hyperstatsOut, Model.FIELD_DELIM.join( [indx] + computeStats(len(self.conSpecs), self.obsCnt, conspecData, randomData) )
             if runDatOut:
                 print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
 	
@@ -712,14 +767,17 @@ class PostModel(Model):
 
 def prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime = True):
     """ populate the par object with the correct values.  Also modify the timestamp base on data from obs file """
+    par = copy.copy(parData)
     if modifyTime:
 	chngtime = str( int( time / float(obs.gen)) )
+	par.setPopulation(PopType, obs.getPopRange())
+	par.setLociRate(LPType, obs.getMutationRange())
     else:
 	chngtime = str(time)
-    par = copy.copy(parData)
-    par.setPopulation(PopType, obs.getPopRange())
+	par.setStaticPop(obs.getPop())
+	par.setStaticLociRate(obs.getMutationRate())
+	par.setExpan(obs.getExpan())
     par.setTime(chngtime)
-    par.setLociRate(LPType, obs.getMutationRange())
     par.setgamma(obs.gamma)
     par.setSampleSize(obs.nsam)
     par.setLoci(obs.nsites)
@@ -727,7 +785,7 @@ def prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime = True):
     return chngtime, par
 
 
-def parseObs(obs):
+def parseObs(obs, ObsType = ObservationData):
     """
     The observation file is a tab delimited file. This can easily be
     split and stored in memory.
@@ -737,7 +795,7 @@ def parseObs(obs):
 
     obsf = open(obs, "rU")
     ObservationData.columns = map(string.strip, obsf.next().strip().lower().split("\t"))
-    obsl = [ObservationData( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
+    obsl = [ObsType( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
     obsf.close()
     return obsl
 
@@ -795,12 +853,15 @@ def main_init(options, par):
 	runData.close()	
 
 
-def selectRuns(uidlst, run_dat):
+def selectRuns(uidlst, run_dat, observations):
+    """
+    generator function that traverse the rundat file and returns a single hit at a time
+    """
+
     uids = dict([(l.strip().split()[0], None,) for l in open(uidlst, "rU")])
     rundat = open(run_dat, "rU")
-    parsedData = []
     for l in rundat:
-	line = l.strip().split()
+	line = l.strip().split("\t")
 	if line[0] not in uids:
 	    continue
 	uid = line[0]
@@ -811,32 +872,41 @@ def selectRuns(uidlst, run_dat):
 	step = 14
 	obs = []
 	for x in xrange(cnt):
-	    obs.append(line[start:end])
+	    #HEADERS = ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
+	    record = dict(zip(BayeSSCData.HEADERS, line[start:end]))
+	    # perform a shallow copy or deepcopy??? deepcopy copy
+	    obj = copy.deepcopy(observations[record[BayeSSCData.HEADERS[0]]])
+	    obj.setPop(record[BayeSSCData.HEADERS[10]])
+	    obj.setMutationRate(record[BayeSSCData.HEADERS[12]])
+	    obj.setExpan(record[BayeSSCData.HEADERS[11]])
+	    obj.setTime(record[BayeSSCData.HEADERS[13]])
+	    obs.append(obj)
 	    start = end
 	    end +=  step
 	model = uid.split("_")[2]
-	parsedData.append([ model, obs[:model], obs[model:] ] )
-    return parsedData
+	model = int(model)
+	yield [ model, obs[:model], obs[model:] ]
 
 
 def main_post(options, par):
     """
     main loop specific to the posterior mode of the program
     """
-    observations = parseObs(options.obs)
-    #TODO: parse the run_data and the UID list to select what to process
-    conspecs, randspecs = selectRuns(options.uidlst, options.run_dat)
-    
+    observations = parseObs(options.obs, PostObservationData)
+    observation_dict = dict( [ (o.getlabel(), o,) for o in observations])
+    #runs == [model, conspecs, randspecs ]
     
     obsCnt = len(observations)    
-    hyperstats = open(os.path.join(options.outdir, "hyperstats_iterations_%s.txt"%(options.repeats)), "w")
+    hyperstats = open(os.path.join(options.outdir, "post_hyperstats_iterations_%s.txt"%(options.repeats)), "w")
     runData = None
     if not options.onlyHyperstats:
-	    runData = open(os.path.join(options.outdir, "run_data_iterations_%s.csv"%(options.repeats)), "w")
-    #index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
-    processor = PostModel(options, par, conSpecs, conSpecsTimes, randSpecs, randSpecsTimes, BayeSSC(options.bayesPath) )          
-    processor.execute(model, hyperstats, runData)
+	    runData = open(os.path.join(options.outdir, "post_run_data_iterations_%s.csv"%(options.repeats)), "w")
 
+    #TODO: parse the run_data and the UID list to select what to process
+    for model, conSpecs, randSpecs in selectRuns(options.uidlst, options.run_dat, observation_dict):
+	#index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
+	processor = PostModel(options, par, conSpecs, randSpecs, BayeSSC(options.bayesPath) )          
+	processor.execute(model, hyperstats, runData)
     hyperstats.close()
     if runData:
 	runData.close()	
@@ -857,23 +927,22 @@ def main():
 	pass
 
 
-
 def mode_init(parser, options, args):
-     if not options.trange:
-	 parser.print_help()
-	 parser.error("Time range is required")
-     if options.trange.find(".") != -1:
-	 parser.print_help()
-	 parser.error("Time range must consist of only integers")
-     options.trange = options.trange.split(":")
-     if len(options.trange) != 2:
-	 parser.print_help()
-	 parser.error("Time range  must be provided in the following format:  <lowerbounds>:<upperbounds> Example: 1000:20000")
-     try:
-	 options.trange = map(int, options.trange)
-     except:
-	 parser.print_help()
-	 parser.error("Time range does not consist of valid integers")    
+    if not options.trange:
+	parser.print_help()
+	parser.error("Time range is required")
+    if options.trange.find(".") != -1:
+	parser.print_help()
+	parser.error("Time range must consist of only integers")
+    options.trange = options.trange.split(":")
+    if len(options.trange) != 2:
+	parser.print_help()
+	parser.error("Time range  must be provided in the following format:  <lowerbounds>:<upperbounds> Example: 1000:20000")
+    try:
+	options.trange = map(int, options.trange)
+    except:
+	parser.print_help()
+	parser.error("Time range does not consist of valid integers")  
     return (options, args,)
     
 
@@ -886,8 +955,6 @@ def mode_post(parser, options, args):
 	parser.error("Run data file is required")  
     return (options, args,)
     
-
-
 	
 def commandlineArgs():
     """
@@ -896,7 +963,7 @@ def commandlineArgs():
     global BAYESSC_PATH
     parser = OptionParser("%prog [options]")
 
-    parser.add_option("", "--mode", dest = "mode", help = "program operation mode [required]", action = "store", type = "string", choices = [ 'initial', 'posterior' ] )
+    parser.add_option("", "--mode", dest = "mode", help = "program operation mode [ 'initial', 'posterior' ] [required]", action = "store", type = "choice", choices = [ 'initial', 'posterior' ] )
     parser.add_option("-p", "--par", dest = "par", help = "par file template [required]", action = "store", type = "string", metavar = "FILE")
     parser.add_option("-i", "--obs", dest = "obs", help = "Observation file [required]", action = "store", type = "string", metavar = "FILE")
     parser.add_option("-r", "--repeat", dest = "repeats", help = "Number of times to try a given congruent group size [required]", action = "store", type = "int", metavar = "NUM")
@@ -918,7 +985,7 @@ def commandlineArgs():
 
     post_group = OptionGroup(parser, "Posterior Run", "Options to be applied during mode 'posterior'")   
 
-    post_group.add_option("", "--uid_list", action="store", dest="uidlst", default="", type = "string", metavbar = "FILE", help="Speccifies a list of UIDs to filter on for Posterior processing [required]")
+    post_group.add_option("", "--uid_list", action="store", dest="uidlst", default="", type = "string", metavar = "FILE", help="Speccifies a list of UIDs to filter on for Posterior processing [required]")
     post_group.add_option("", "--run_data", action="store", dest="run_dat", default="", type = "string", metavar = "FILE", help="run data which contains the --uid_list UIDs.  It is used for the Posterior processing [required]")
 
     parser.add_option_group(post_group)    
@@ -974,7 +1041,7 @@ def commandlineArgs():
 	parser.print_help()
 	parser.error("Mode must be either 'initial' or 'posterior'")
 	
-    return options, 
+    return options
 
 
 if __name__ == "__main__":
