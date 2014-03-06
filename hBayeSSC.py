@@ -211,9 +211,9 @@ class BayeSSCData(CommonData):
         - time is a random int, between 2 user defined values.
         """
 	super(BayeSSCData, self).fill(obsData.label, obsData.nsam, obsData.nsites, statsData, statsData.get('nucltddiv', float("NaN") ))
-	self.ne = statsData.get('deme size', None)
-	self.expan = statsData.get('event size', None)
-	self.mu = statsData.get('mutation rate', None)
+	self.ne = statsData.get('deme size', float("NaN"))
+	self.expan = statsData.get('event size', float("NaN"))
+	self.mu = statsData.get('mutation rate', float("NaN"))
 	self.time = time
     
     def setNE(self, ne):
