@@ -4,7 +4,8 @@
 
 
 ## Example Command lines
-The program has several command line options, which can be found using the -h option when executing the script.  Here is a sample execution lines and their explanations:
+The program has several command line options, which can be found using the -h option when executing the script.  
+Here are two sample command lines:
 
 ```  
 python hBayeSSC.py --mode initial -i aus_birds_obs -p bss_con_expan.par  -r 1 -t 1000:200000 -u 1 -b ./BayeSSC  
