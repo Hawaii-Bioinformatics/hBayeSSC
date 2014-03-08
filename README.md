@@ -33,8 +33,7 @@ Options:
   --print_headers       When set will generate a headers.txt and exit
   -o PATH, --outdir=PATH
                         Directory to generate final outputs in (will create
-                        missing folders) [default:
-                        E:\Source_Files\Work_Related\yvonne]
+                        missing folders) [default: <working directory> ]
 
   Regular Run:
     Options to be applied during mode 'initial'
