@@ -1,18 +1,17 @@
-##Requirements##
-- [BayeSSC](http://www.stanford.edu/group/hadlylab/ssc/)
-- python >= 2.4 
+## Requirements ##  
+ *  [BayeSSC](http://www.stanford.edu/group/hadlylab/ssc/)   
+ *  python >= 2.4   
 
 
-##Example Command lines##
+## Example Command lines ##  
 The program has several command line options, which can be found using the -h option when executing the script.  Here is a sample execution lines and their explanations:
 
-```
-python hBayeSSC.py --mode initial -i aus_birds_obs -p bss_con_expan.par  -r 1 -t 1000:200000 -u 1 -b ./BayeSSC
+```  
+python hBayeSSC.py --mode initial -i aus_birds_obs -p bss_con_expan.par  -r 1 -t 1000:200000 -u 1 -b ./BayeSSC  
+python hBayeSSC.py --mode posterior -i aus_birds_obs -p bss_con_expan.par  -r 1 --uid_list filter.lst  --run_data run_data_iterations_1.csv -u 1 -b ./BayeSSC  
+```  
 
-python hBayeSSC.py --mode posterior -i aus_birds_obs -p bss_con_expan.par  -r 1 --uid_list filter.lst  --run_data run_data_iterations_1.csv -u 1 -b ./BayeSSC 
-```
-
-##Options##
+## Options ##  
 
 -p : the par file we will use as a template.  the python script expects the par in a similar format
 -i : the observation file.  This is a tab delimited file, in which the 1st line is a header line.  See the obs_NWHI for the valid headers
@@ -23,8 +22,8 @@ python hBayeSSC.py --mode posterior -i aus_birds_obs -p bss_con_expan.par  -r 1 
 -m : specify which model to execute.  If -m is not provided, it will execute all models.
 
 -o : defines where to generate your output.  By default it generates your output in the current working directory
-
-```
+  
+```  
 #> python hBayeSSC.py -h
 
 Usage: hBayeSSC.py [options]
@@ -69,4 +68,4 @@ Options:
                         processing [required]
     --run_data=FILE     run data which contains the --uid_list UIDs.  It is
                         used for the Posterior processing [required]
-```
+```  
