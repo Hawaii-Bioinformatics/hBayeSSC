@@ -12,16 +12,6 @@ python hBayeSSC.py --mode posterior -i aus_birds_obs -p bss_con_expan.par  -r 1 
 ```  
 
 ## Options
-
--p : the par file we will use as a template.  the python script expects the par in a similar format  
--i : the observation file.  This is a tab delimited file, in which the 1st line is a header line.  See the obs_NWHI for the valid headers  
--r : How many times we repeat the execution of BayeSSC for a given model  
--u : a unique identifier.  This can be a string or a number.  It prefixes the index value.  The index is made up of 6 components <uid>_<congruent count>_<total obs>_<trail/repeat #>_<random number with . replaced by _>_<timestamp with . replaced by _>  
--b : the path to where BayeSSC is.  If it isn't supplied, it assumes it is on the Users PATH  
--t : the time Range in which we can randomly select times from.  This is here instead of in the par file, since we now use python to randomly select a time value.  
--m : specify which model to execute.  If -m is not provided, it will execute all models.  
--o : defines where to generate your output.  By default it generates your output in the current working directory  
-  
 ```  
 #> python hBayeSSC.py -h
 
