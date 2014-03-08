@@ -19,7 +19,6 @@ except:
     def isinf(val):
         return val == float('-inf') or val == float('inf')
 
-<<<<<<< HEAD
 from optparse import OptionParser, OptionGroup
 
 
@@ -40,12 +39,6 @@ David S, 10:42:36 PM:
 
 
 
-=======
-from optparse import OptionParser
-
-
-"""
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 # script to count appearances from hyperstats or UID list
 # script to pull specific models by UID
 
@@ -107,12 +100,9 @@ class CommonData(object):
 	self.hapdiv = data.get('hapdiver', float("NaN") )
 	self.tajd = data.get('tajimasd', float("NaN") )
 	self.fusf = data.get('f*', float("NaN") )
-<<<<<<< HEAD
     
     def getlabel(self):
 	return self.label
-=======
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 
     def addStats(self, statsdict):
 	statsdict['haps'].Push(self.haps)
@@ -174,7 +164,6 @@ class ObservationData(CommonData):
                                   self.nucdiv, self.haps, self.hapdiv, self.pair, 
                                   self.tajd, self.fusf, self.exphet]) )
 
-<<<<<<< HEAD
 class PostObservationData(ObservationData):
     """ Represents a row in the Observeration file """
     # default column order
@@ -205,10 +194,6 @@ class PostObservationData(ObservationData):
     
 class BayeSSCData(CommonData):
     HEADERS = ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
-=======
-
-class BayeSSCData(CommonData):
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     """Represents a row in the BayeSSC stats file """
     def __init__(self, obs = None, time = None, data = None):
 	super(BayeSSCData, self).__init__()
@@ -226,7 +211,6 @@ class BayeSSCData(CommonData):
         - time is a random int, between 2 user defined values.
         """
 	super(BayeSSCData, self).fill(obsData.label, obsData.nsam, obsData.nsites, statsData, statsData.get('nucltddiv', float("NaN") ))
-<<<<<<< HEAD
 	self.ne = statsData.get('deme size', float("NaN"))
 	self.expan = statsData.get('event size', float("NaN"))
 	self.mu = statsData.get('mutation rate', float("NaN"))
@@ -238,12 +222,6 @@ class BayeSSCData(CommonData):
 	self.expan = expan
     def setMU(self, mu):
 	self.mu = mu
-=======
-	self.ne = statsData['deme size']
-	self.expan = statsData['event size']
-	self.mu = statsData['mutation rate']
-	self.time = time
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 
     def addStats(self, statsdict):
 	statsdict = super(BayeSSCData, self).addStats(statsdict)
@@ -255,11 +233,7 @@ class BayeSSCData(CommonData):
 	return statsdict
     
     def header(self):
-<<<<<<< HEAD
 	return BayeSSCData.HEADERS
-=======
-	return ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 
     def __str__(self):
         return "\t".join(map(str, [self.label,
@@ -451,7 +425,6 @@ class ParFile(object):
 	    ele.append(buf)
 	return " ".join([e.replace(" ", "") for e in ele])
 
-<<<<<<< HEAD
     def setStaticPop(self, pop):
 	 self.popsize = ["%.15f"%(pop) for r in self.popsize]
 
@@ -466,8 +439,6 @@ class ParFile(object):
     def setStaticLociRate(self, locirate):
 	self.rate = "%.15f"%(locirate)
 	
-=======
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     def setPopulation(self, distro, poprng):
 	self.popsize = ["{%s:%.15f,%.15f}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
     
@@ -475,11 +446,7 @@ class ParFile(object):
 	npop = []
 	for r in self.events:
 	    ele = r.split()
-<<<<<<< HEAD
 	    ele[0] = str(time)
-=======
-	    ele[0] = time
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 	    npop.append(" ".join(ele))
 	self.events = npop        
 
@@ -666,10 +633,7 @@ class BayeSSC(object):
         o.close()
         os.system("%s -f %s 1 2>/dev/null >/dev/null"%(self.execpath, fpath))
         data = self.__parseBayeSSCOut(self.__getStatsPath(fpath))
-<<<<<<< HEAD
 	
-=======
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
         return BayeSSCData(obs, ctime, data)
 
     def exceuteBateSSCWithRetry(self, obs, chngtime, par, outdir):
@@ -722,13 +686,8 @@ class Model(object):
             if runDatOut:
                 print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
 
-<<<<<<< HEAD
     def _commonExec(self, obs, parData, time, LPType, PopType, outdir, rows, modifyTime = True):
         chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime)
-=======
-    def __commonExec(self, obs, parData, time, LPType, PopType, outdir, rows):
-        chngtime, par = prepareNewParFile(obs, parData, time, LPType, PopType)
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
         row = self.bayessc.exceuteBateSSCWithRetry(obs, chngtime, par, outdir)
         if row:
             rows.append(row)
@@ -739,11 +698,7 @@ class Model(object):
         rows = []
         time = float(self.timeGenerator.generate(timerange) )   
         for obs in observations:
-<<<<<<< HEAD
             rows = self._commonExec(obs, parData, time, LPType, PopType, outdir, rows)
-=======
-            rows = self.__commonExec(obs, parData, time, LPType, PopType, outdir, rows)
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
         if len(rows) != len(observations):
             raise BadBayesOutput("Did not generate an output for each observation")            
         return rows
@@ -756,17 +711,12 @@ class Model(object):
         rows = []
         for obs in observations:
             time = float(timeGenerator.generate(timerange) )
-<<<<<<< HEAD
             rows = self._commonExec(obs, parData, time, LPType, PopType, outdir, rows)
-=======
-            rows = self.__commonExec(obs, parData, time, LPType, PopType, outdir, rows)
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
         if len(rows) != len(observations):
             raise BadBayesOutput("Did not generate an output for each observation")
         return rows
 
 
-<<<<<<< HEAD
 class PostModel(Model):    
     def __init__(self,options, par, conSpecs, randSpecs, bayessc):	
 	super(PostModel, self).__init__(options, par, None, len(conSpecs) + len(randSpecs), None, None, bayessc)
@@ -828,15 +778,6 @@ def prepareNewParFile(obs, parData, time, LPType, PopType, modifyTime = True):
 	par.setStaticLociRate(obs.getMutationRate())
 	par.setExpan(obs.getExpan())
     par.setTime(chngtime)
-=======
-def prepareNewParFile(obs, parData, time, LPType, PopType):
-    """ populate the par object with the correct values.  Also modify the timestamp base on data from obs file """
-    chngtime = str( int( time / float(obs.gen)) )
-    par = copy.copy(parData)
-    par.setPopulation(PopType, obs.getPopRange())
-    par.setTime(chngtime)
-    par.setLociRate(LPType, obs.getMutationRange())
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     par.setgamma(obs.gamma)
     par.setSampleSize(obs.nsam)
     par.setLoci(obs.nsites)
@@ -844,11 +785,7 @@ def prepareNewParFile(obs, parData, time, LPType, PopType):
     return chngtime, par
 
 
-<<<<<<< HEAD
 def parseObs(obs, ObsType = ObservationData):
-=======
-def parseObs(obs):
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     """
     The observation file is a tab delimited file. This can easily be
     split and stored in memory.
@@ -858,11 +795,7 @@ def parseObs(obs):
 
     obsf = open(obs, "rU")
     ObservationData.columns = map(string.strip, obsf.next().strip().lower().split("\t"))
-<<<<<<< HEAD
     obsl = [ObsType( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
-=======
-    obsl = [ObservationData( dict( izip(ObservationData.columns, l.strip().split("\t")) ) ) for l in obsf]
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     obsf.close()
     return obsl
 
@@ -888,25 +821,12 @@ def which(program):
     return None
 
 
-<<<<<<< HEAD
 def main_init(options, par):
     """
     main loop specific to the initial mode of the program
     """
     observations = parseObs(options.obs)
     obsCnt = len(observations)
-=======
-def main():
-    """
-    Main loop of the appliocation
-    drives how the program executes (only 1 model, or multiple models).
-    """
-    options = commandlineArgs()
-    par = ParFile(options.par)
-    observations = parseObs(options.obs)
-    obsCnt = len(observations)
-    #if options.model:
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     if options.makestats:
         obsStats = open(os.path.join(options.outdir,"hyperstats_observations.txt"), "w")
         index = "%s_%s_%s_%s_%s"%(options.uid, -1, -1, -1, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
@@ -932,7 +852,6 @@ def main():
     if runData:
 	runData.close()	
 
-<<<<<<< HEAD
 
 def selectRuns(uidlst, run_dat, observations):
     """
@@ -1036,8 +955,6 @@ def mode_post(parser, options, args):
 	parser.error("Run data file is required")  
     return (options, args,)
     
-=======
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 	
 def commandlineArgs():
     """
@@ -1045,7 +962,6 @@ def commandlineArgs():
     """
     global BAYESSC_PATH
     parser = OptionParser("%prog [options]")
-<<<<<<< HEAD
 
     parser.add_option("", "--mode", dest = "mode", help = "program operation mode [ 'initial', 'posterior' ] [required]", action = "store", type = "choice", choices = [ 'initial', 'posterior' ] )
     parser.add_option("-p", "--par", dest = "par", help = "par file template [required]", action = "store", type = "string", metavar = "FILE")
@@ -1073,25 +989,10 @@ def commandlineArgs():
     post_group.add_option("", "--run_data", action="store", dest="run_dat", default="", type = "string", metavar = "FILE", help="run data which contains the --uid_list UIDs.  It is used for the Posterior processing [required]")
 
     parser.add_option_group(post_group)    
-=======
-    parser.add_option("-p", "--par", dest = "par", help = "par file template [required]", action = "store", type = "string", metavar = "FILE")
-    parser.add_option("-i", "--obs", dest = "obs", help = "Observation file [required]", action = "store", type = "string", metavar = "FILE")
-    parser.add_option("-r", "--repeat", dest = "repeats", help = "Number of times to try a given congruent group size [required]", action = "store", type = "int", metavar = "NUM")
-    parser.add_option("-m", "--model", dest = "model", help = "Run a single model (0 to total entries in observation file) [default: run all models] ", action = "store", type = "int", metavar = "MODEL", default = None)
-    parser.add_option("-u", "--uid", dest = "uid", help = "Unique ID to prefix generated indices [required]", action = "store", type = "string", metavar = "UID")
-    parser.add_option("-l", "--LPType", dest = "LPType", help = "Loci Rate Priori Type", action = "store", type = "choice", choices = ["U"], default = "U", metavar = "TYPE")
-    parser.add_option("-o", "--outdir", dest = "outdir", help = "Directory to generate final outputs in (will create missing folders) [default: %default]", action = "store", type = "string", metavar = "PATH", default = os.getcwd())
-    parser.add_option("-t", "--timerange", dest= "trange", help = "The range of values to select the time from (Integers). Example: 1000:20000  [required]", action = "store", type = "string", metavar ="RANGE")
-    parser.add_option("-b", "--bayepath", dest = "bayesPath", help = "Path to BayeSSC application [default: Located on user PATH]", action = "store", type = "string", metavar = "PATH", default = "BayeSSC")
-    parser.add_option("", "--obs_stats", action="store_true", dest="makestats", default=False, help="When set, will generate a statistics output for the observation data")
-    parser.add_option("", "--only_hyperstats", action="store_true", dest="onlyHyperstats", default=False, help="When set, will only generate the hyperstats file")
-    parser.add_option("", "--print_headers", action="store_true", dest="headers", default=False, help="When set will generate a headers.txt and exit")
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 
     (options, args) = parser.parse_args()    
 
     if options.headers:
-<<<<<<< HEAD
 	 print "Generating header file"
 	 bayshdr = ['index'] + BayeSSCData().header()
 	 hyperhdr = ['index'] + statsHeader()
@@ -1103,18 +1004,6 @@ def commandlineArgs():
 	 o.close()
 	 sys.exit()
 
-=======
-	print "Generating header file"
-	bayshdr = ['index'] + BayeSSCData().header()
-	hyperhdr = ['index'] + statsHeader()
-	o = open("headers.txt", "w")
-	print >> o , "Iteration file header"
-	print >> o, Model.FIELD_DELIM.join(bayshdr)
-	print >> o, "\nHyperstats file header"
-	print >> o, Model.FIELD_DELIM.join(hyperhdr)
-	o.close()
-	sys.exit()
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
 
     if not options.par:
 	parser.print_help()
@@ -1143,7 +1032,6 @@ def commandlineArgs():
     if not BAYESSC_PATH:
 	parser.print_help()
 	parser.error("BayeSSC application not found at supplied path: '%s'" %(options.bayesPath))
-<<<<<<< HEAD
 
     if options.mode == 'initial':
 	options, args = mode_init(parser, options, args)
@@ -1153,23 +1041,6 @@ def commandlineArgs():
 	parser.print_help()
 	parser.error("Mode must be either 'initial' or 'posterior'")
 	
-=======
-    if not options.trange:
-	parser.print_help()
-	parser.error("Time range is required")
-    if options.trange.find(".") != -1:
-	parser.print_help()
-	parser.error("Time range must consist of only integers")
-    options.trange = options.trange.split(":")
-    if len(options.trange) != 2:
-	parser.print_help()
-	parser.error("Time range  must be provided in the following format:  <lowerbounds>:<upperbounds> Example: 1000:20000")
-    try:
-	options.trange = map(int, options.trange)
-    except:
-	parser.print_help()
-	parser.error("Time range does not consist of valid integers")
->>>>>>> 6dc95d04652a98f5015cd93604d0ee9f32001db2
     return options
 
 
