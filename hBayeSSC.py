@@ -53,6 +53,14 @@ Assumptions:
 - Assume only 1 iteration in BayeSSC per run
 """
 
+# https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks-in-python
+def chunks(l, n):
+    """ 
+    Yield successive n-sized chunks from l.
+    """
+    for i in xrange(0, len(l), n):
+	yield l[i:i+n]
+
 def skipNanInf(value):
     """
     The default filtering action used by RunningStat when using Push()
@@ -111,6 +119,7 @@ class CommonData(object):
 	statsdict['pair'].Push(self.pair)
 	statsdict['tajd'].Push(self.tajd)
 	statsdict['fusf'].Push(self.fusf)
+	statsdict['segsites'].Push(self.seg)
 	return statsdict
 
  
@@ -152,7 +161,7 @@ class ObservationData(CommonData):
 	return super(ObservationData, self).addStats(statsdict)
 
     def getPopRange(self):
-        return (float(self.neLow), float(self.neHigh))
+        return (int(self.neLow), int(self.neHigh))
         
     def getMutationRange(self):
         return (float(self.locuslow), float(self.locushigh))
@@ -175,7 +184,7 @@ class PostObservationData(ObservationData):
 	self.time = 0
 
     def setPop(self, pop):
-	self.pop = float(pop)
+	self.pop = int(pop)
     def setMutationRate(self, mutate):
 	self.mutate = float(mutate)
     def setExpan(self, expan):
@@ -426,7 +435,7 @@ class ParFile(object):
 	return " ".join([e.replace(" ", "") for e in ele])
 
     def setStaticPop(self, pop):
-	 self.popsize = ["%.15f"%(pop) for r in self.popsize]
+	 self.popsize = ["%s"%(pop) for r in self.popsize]
 
     def setExpan(self, expan):
 	npop = []
@@ -440,7 +449,7 @@ class ParFile(object):
 	self.rate = "%.15f"%(locirate)
 	
     def setPopulation(self, distro, poprng):
-	self.popsize = ["{%s:%.15f,%.15f}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
+	self.popsize = ["{%s:%s,%s}"%(distro, poprng[0], poprng[1]) for r in self.popsize]
     
     def setTime(self, time):
 	npop = []
@@ -551,13 +560,14 @@ def statsHeader():
      'nucdiv_Mean', 'nucdiv_Variance', 'nucdiv_Skewness', 'nucdiv_Kurtosis',
      'tajimasd_Mean', 'tajimasd_Variance', 'tajimasd_Skewness', 'tajimasd_Kurtosis',
      'fusf_Mean', 'fusf_Variance', 'fusf_Skewness', 'fusf_Kurtosis',	
-     'pairDiffs_Mean', 'pairDiffs_Variance', 'pairDiffs_Skewness', 'pairDiffs_Kurtosis']
+     'pairDiffs_Mean', 'pairDiffs_Variance', 'pairDiffs_Skewness', 'pairDiffs_Kurtosis',
+     'segsites_Mean', 'segsites_Variance', 'segsites_Skewness', 'segsites_Kurtosis']
 
 def computeStats(congruentCnt, total, conspecData = None, randomData = None, obsData = None):
     """ Using the collect data from multipl repeats, compute some statistics on particular data columns """
     statsdict = dict(expan = RunningStat(), mu = RunningStat(), ne = RunningStat(), contime = RunningStat(), 
                  rndtime = RunningStat(), haps = RunningStat(), hapdiv = RunningStat(), nucdiv = RunningStat(), 
-                 pair = RunningStat(), tajd = RunningStat(), fusf = RunningStat(), overalltime = RunningStat())
+                 pair = RunningStat(), segsites = RunningStat(), tajd = RunningStat(), fusf = RunningStat(), overalltime = RunningStat())
     if conspecData or randomData:
         for row in conspecData:
 	    statsdict = row.addStats(statsdict)
@@ -582,7 +592,7 @@ def computeStats(congruentCnt, total, conspecData = None, randomData = None, obs
         v  = statsdict[k].collectMeanAndVariance(v)
         tmp.append(v)
     stats.extend(chain( *tmp))
-    stats.extend(chain( *[statsdict[k].collectStats() for k in ['haps', 'hapdiv', 'nucdiv', 'tajd', 'fusf', 'pair']] ))
+    stats.extend(chain( *[statsdict[k].collectStats() for k in ['haps', 'hapdiv', 'nucdiv', 'tajd', 'fusf', 'pair', 'segsites']] ))
     return map(str, stats)
     
 
@@ -866,14 +876,10 @@ def selectRuns(uidlst, run_dat, observations):
 	    continue
 	uid = line[0]
 	line = line[1:]
-	start = 0
-	end = 14
-	cnt = len(line) / 14
-	step = 14
 	obs = []
-	for x in xrange(cnt):
+	for r in  chunks(line, len(BayeSSCData.HEADERS)):
+	    record = dict(zip(BayeSSCData.HEADERS, r))
 	    #HEADERS = ['species', 'nsam','nsites', 'haptype', 'segsites', 'pairdiffs', 'hapdiv', 'nucdiv', 'tajimasd', 'fusf','ne', 'expan', 'mu', 'time']
-	    record = dict(zip(BayeSSCData.HEADERS, line[start:end]))
 	    # perform a shallow copy or deepcopy??? deepcopy copy
 	    obj = copy.deepcopy(observations[record[BayeSSCData.HEADERS[0]]])
 	    obj.setPop(record[BayeSSCData.HEADERS[10]])
@@ -881,8 +887,6 @@ def selectRuns(uidlst, run_dat, observations):
 	    obj.setExpan(record[BayeSSCData.HEADERS[11]])
 	    obj.setTime(record[BayeSSCData.HEADERS[13]])
 	    obs.append(obj)
-	    start = end
-	    end +=  step
 	model = uid.split("_")[2]
 	model = int(model)
 	yield [ model, obs[:model], obs[model:] ]
