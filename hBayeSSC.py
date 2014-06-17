@@ -23,22 +23,6 @@ from optparse import OptionParser, OptionGroup
 
 
 """
---note that we are not changing ==anything== in the runs.  we just want to run a specific set of params.--
-epic888, 3/3/2014 10:23:04 PM:
-It looks like you write out the time, mutation rate, expansion..
-
-David S, 3/3/2014 10:41:51 PM:
-1. modify the hbayessc so that it can take a UID list  (or  posterior file) and a data_run file
-
-David S, 10:42:10 PM:
-2. generate new par files using the exact parameters define din the data_run file per given UID
-
-David S, 10:42:36 PM:
-3. run bayessc for 1 iteration and make a new hyperstats (allow N iterations)
-
-
-
-
 # script to count appearances from hyperstats or UID list
 # script to pull specific models by UID
 
