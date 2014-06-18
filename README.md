@@ -1,13 +1,12 @@
 hBayeSSC is a python script that wraps around serial simcoal in order to simulate a multi-taxa community undergoing a coordinated demographic expansion.
 
-
 ## Requirements
 The files needed to produce a set of simulations with multitaxa summary statistics for the hABC analysis described in Chan et al. 2014 are: 
  *  BayeSSC - The executable for Serial Simcoal which can be found here: [site](http://www.stanford.edu/group/hadlylab/ssc/)   
  *  python >= 2.4   
  *  hBayeSSC.py
  *  A table of observed summary statistics for each taxon in the community [example_obs](/example_data/example_obs) 
- *  An input par file for serial simcoal [example.par](/exmaple_data/example.par) 
+ *  An input par file for serial simcoal [example.par](/example_data/example.par) 
  *  msReject (Optional) [Install Instructions](#msreject-module)
 
 ## Observation summarty statistics format
