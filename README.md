@@ -8,8 +8,8 @@ The files needed to produce a set of simulations with multitaxa summary statisti
  *  msReject (Optional) [Install Instructions](#msreject-module)
 
 ## Input files
- *  A table of observed summary statistics for each taxon in the community [details](#observation-summary-statistics)
- *  An input par file for serial simcoal [details](#par-file)
+ *  A table of observed summary statistics for each taxon in the community. ([details](#observation-summary-statistics))
+ *  An input par file for serial simcoal. ([details](#par-file))
 
 ### Observation summary statistics
 [Sample file](/example_data/example_obs)  
