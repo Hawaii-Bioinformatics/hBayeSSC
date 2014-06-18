@@ -8,7 +8,7 @@ The files needed to produce a set of simulations with multitaxa summary statisti
  *  hBayeSSC.py
  *  A table of observed summary statistics for each taxon in the community [example_obs](/example_data/example_obs) 
  *  An input par file for serial simcoal [example.par](/exmaple_data/example.par) 
- *  msReject (Optional) [Install Instructions](#msReject module)
+ *  msReject (Optional) [Install Instructions](#msReject-module)
 
 ## Observation summarty statistics format
 The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values.  A more complete
