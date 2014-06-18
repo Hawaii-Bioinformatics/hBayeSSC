@@ -9,7 +9,7 @@ The files needed to produce a set of simulations with multitaxa summary statisti
  *  An input par file for serial simcoal [example.par](/example_data/example.par) 
  *  msReject (Optional) [Install Instructions](#msreject-module)
 
-## Observation summarty statistics format
+## Observation summary statistics format
 The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values.  A more complete
 description of these values can be found on the [BayeSSC website](http://www.stanford.edu/group/hadlylab/ssc/): 
 
