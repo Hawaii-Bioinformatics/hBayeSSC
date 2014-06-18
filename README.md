@@ -12,7 +12,7 @@ The files needed to produce a set of simulations with multitaxa summary statisti
  *  An input par file for serial simcoal. ([details](#par-file))
 
 ### Observation summary statistics
-[Sample file](/example_data/example_obs)  
+[Sample observation file](/example_data/example_obs)  
 
 The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values:
 
@@ -38,7 +38,7 @@ The table of observed summary statistics consists of columns with the following 
 A more complete description of these values can be found on the [BayeSSC website](http://www.stanford.edu/group/hadlylab/ssc/)
 
 ### par file
-[Sample file](/example_data/example.par)  
+[Sample par file](/example_data/example.par)  
 
 The par file contains one prior which is not individually replaced, such as expansion magnitude (under historical events) and will apply to all populations.
 
