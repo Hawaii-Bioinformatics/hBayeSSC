@@ -105,7 +105,7 @@ We use this command with a reference table of 200,000 iterations per model to do
 msReject hyperstats_observations.txt reference_table.txt 0.0015151515151515151515 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 > Posterior
 ```
 Instructions for installing the msReject module of msBayes can be found here:
-(Instructions)[https://docs.google.com/document/d/1enMQaogxOs0RppAmE8KcGU3nNjzotuiycAl6I1s0KYg/edit]
+[Instructions](https://docs.google.com/document/d/1enMQaogxOs0RppAmE8KcGU3nNjzotuiycAl6I1s0KYg/edit)
 
 Then we use the following R-script and abc.R to do the final 1,000 acceptance and parameter estimation using local linear regression.
 
