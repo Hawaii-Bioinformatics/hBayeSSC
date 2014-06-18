@@ -6,7 +6,7 @@ The applications required to produce a set of simulations with multitaxa summary
  *  [BayeSSC - Serial Simcoal](http://www.stanford.edu/group/hadlylab/ssc/)   
  *  [Python 2.x](https://www.python.org/) >= 2.4   
  *  hBayeSSC.py
- *  msReject (Optional) [Installation instructions](#msreject-module)
+ *  msReject ([Installation instructions](#msreject-module))
 
 
 ## Input files
