@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>hBayeSSC by UH-Bioinformatics</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/UH-Bioinformatics/hBayeSSC">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/UH-Bioinformatics/hBayeSSC/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/UH-Bioinformatics/hBayeSSC/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>hBayeSSC</h1>
+          <p>A python script that wraps around serial simcoal in order to simulate a multi-taxa community undergoing a coordinated demographic expansion</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/UH-Bioinformatics">UH-Bioinformatics</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        <p>hBayeSSC is a python script that wraps around serial simcoal in order to simulate a multi-taxa community undergoing a coordinated demographic expansion.</p>
+
+<h2>
+<a name="requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h2>
+
+<p>The applications required to produce a set of simulations with multitaxa summary statistics for the hABC analysis described in Chan et al. 2014  </p>
+
+<ul>
+<li> <a href="http://www.stanford.edu/group/hadlylab/ssc/">BayeSSC - Serial Simcoal</a><br>
+</li>
+<li> <a href="https://www.python.org/">Python 2.x</a> &gt;= 2.4<br>
+</li>
+<li> hBayeSSC.py</li>
+<li> <a href="#msreject-module">msReject</a>
+</li>
+</ul><h2>
+<a name="input-files" class="anchor" href="#input-files"><span class="octicon octicon-link"></span></a>Input files</h2>
+
+<p>The input files needed to produce a set of simulations with multitaxa summary statistics for the hABC analysis described in Chan et al. 2014 </p>
+
+<ul>
+<li> A table of observed summary statistics for each taxon in the community. (<a href="#observation-summary-statistics">details</a>)</li>
+<li> An input par file for serial simcoal. (<a href="#par-file">details</a>)</li>
+</ul><h3>
+<a name="observation-summary-statistics" class="anchor" href="#observation-summary-statistics"><span class="octicon octicon-link"></span></a>Observation summary statistics</h3>
+
+<p><a href="/example_data/example_obs">Sample observation file</a>  </p>
+
+<p>The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values:</p>
+
+<table>
+<thead><tr>
+<th>Column name</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>species</td>
+<td>Name of taxa</td>
+</tr>
+<tr>
+<td>nsam</td>
+<td>number of samples to be simulated</td>
+</tr>
+<tr>
+<td>nsites</td>
+<td>Number of base pairs</td>
+</tr>
+<tr>
+<td>tstv</td>
+<td>% transitions</td>
+</tr>
+<tr>
+<td>gamma</td>
+<td>Gamma shape parameter</td>
+</tr>
+<tr>
+<td>gen</td>
+<td>Numbers of years per generation</td>
+</tr>
+<tr>
+<td>locuslow</td>
+<td>Low estimate of the locus mutation rate per generation</td>
+</tr>
+<tr>
+<td>locushigh</td>
+<td>High estimate of the locus mutation rate per generation</td>
+</tr>
+<tr>
+<td>Nelow</td>
+<td>Low estimate for effective population size</td>
+</tr>
+<tr>
+<td>Nehigh</td>
+<td>High estimate for effective population size</td>
+</tr>
+<tr>
+<td>SegSites</td>
+<td>Segregating sites</td>
+</tr>
+<tr>
+<td>nucdiv</td>
+<td>Nucleotide diversity</td>
+</tr>
+<tr>
+<td>Haptypes</td>
+<td>Number of haplotypes</td>
+</tr>
+<tr>
+<td>HapDiver</td>
+<td>Haplotypic diversity</td>
+</tr>
+<tr>
+<td>TajimasD</td>
+<td>Tajima's D</td>
+</tr>
+<tr>
+<td>F*</td>
+<td>Fu's F</td>
+</tr>
+</tbody>
+</table><p>A more complete description of these values can be found on the <a href="http://www.stanford.edu/group/hadlylab/ssc/">BayeSSC website</a></p>
+
+<h3>
+<a name="par-file" class="anchor" href="#par-file"><span class="octicon octicon-link"></span></a>par file</h3>
+
+<p><a href="/example_data/example.par">Sample par file</a>  </p>
+
+<p>The par file contains one prior which is not individually replaced, such as expansion magnitude (under historical events) and will apply to all populations.</p>
+
+<h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>An example command to run 200 iterations of each model from 0/32 to 32/32 species with a prior on the maximum expansion time of 1000 to 500000 years would be: </p>
+
+<pre><code>python hBayeSSC.py --mode initial -p example.par -i example_obs -r 200 -u full -b ./BayeSSC -t 1000:500000
+</code></pre>
+
+<p>This command will create the observed hyperstats file for the rejection analysis: </p>
+
+<pre><code>python hBayeSSC.py --mode initial -p example.par -i example_obs -r 200 -u full -b ./BayeSSC -t 1000:500000 --obs_hyperstats
+</code></pre>
+
+<h2>
+<a name="options" class="anchor" href="#options"><span class="octicon octicon-link"></span></a>Options</h2>
+
+<p>The hBayeSSC has several command line options, which can be found using the -h option when executing the script.  </p>
+
+<pre><code>#&gt; python hBayeSSC.py -h
+
+Usage: hBayeSSC.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  --mode=MODE           program operation mode [ 'initial', 'posterior' ]
+                        [required]
+  -p FILE, --par=FILE   par file template [required]
+  -i FILE, --obs=FILE   Observation file [required]
+  -r NUM, --repeat=NUM  Number of times to try a given congruent group size
+                        [required]
+  -u UID, --uid=UID     Unique ID to prefix generated indices [required]
+  -b PATH, --bayepath=PATH
+                        Path to BayeSSC application [default: Located on user
+                        PATH]
+  --only_hyperstats     When set, will only generate the hyperstats file
+  --print_headers       When set will generate a headers.txt and exit
+  -o PATH, --outdir=PATH
+                        Directory to generate final outputs in (will create
+                        missing folders) [default: &lt;working directory&gt; ]
+
+  Regular Run:
+    Options to be applied during mode 'initial'
+
+    -m MODEL, --model=MODEL
+                        Run a single model (0 to total entries in observation
+                        file) [default: run all models]
+    -l TYPE, --LPType=TYPE
+                        Loci Rate Priori Type
+    -t RANGE, --timerange=RANGE
+                        The range of values to select the time from
+                        (Integers). Example: 1000:20000  [required]
+    --obs_stats         When set, will generate a statistics output for the
+                        observation data
+
+  Posterior Run:
+    Options to be applied during mode 'posterior'
+
+    --uid_list=FILE     Speccifies a list of UIDs to filter on for Posterior
+                        processing [required]
+    --run_data=FILE     run data which contains the --uid_list UIDs.  It is
+                        used for the Posterior processing [required]
+</code></pre>
+
+<hr><h2>
+<a name="msreject-module" class="anchor" href="#msreject-module"><span class="octicon octicon-link"></span></a>msReject module</h2>
+
+<p>We use this command with a reference table of 200,000 iterations per model to do the initial acceptance of 10,000 using msReject. </p>
+
+<pre><code>msReject hyperstats_observations.txt reference_table.txt 0.0015151515151515151515 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 &gt; Posterior
+</code></pre>
+
+<p>Instructions for installing the msReject module of msBayes can be found here:
+<a href="https://docs.google.com/document/d/1enMQaogxOs0RppAmE8KcGU3nNjzotuiycAl6I1s0KYg/edit">Instructions</a></p>
+
+<p>Then we use the following R-script and abc.R to do the final 1,000 acceptance and parameter estimation using local linear regression.</p>
+
+<pre><code>library(VGAM)
+library(locfit)
+library(abc)
+
+#load the posterior file of 10,000 acceptances from msreject
+Prior32 &lt;- read.table("Posterior", sep="\t", header = F)
+POSTVEC32&lt;- Prior32[,c(17:32)]
+
+#load summary statistics for observed data (produced by hBayeSSC.py)
+MZ_OBS&lt;- read.table("hyperstats_observations.txt", sep="\t", header = F)
+OBS&lt;- MZ_OBS[,c(17:32)] 
+
+#########back transform function####################
+
+#replace 32 with the number of species
+backtrans_z &lt;- function(val){
+        val &lt;- val*32
+        if(val &lt;= 0.5) {out &lt;- 0}
+        else if((32-0.5) &lt; val) {out &lt;- 32}
+        else {out &lt;- round(val,digit=0)}
+        out &lt;- out/32
+        return(out)
+        }
+
+##########start estimating z-value #################
+
+Z1true1&lt;- MZ_OBS[,4]
+ZVALUE32 &lt;- Prior32[,4]
+RANVALUE1 &lt;- ranprior[,4]
+
+RANVALUE &lt;- sample(RANVALUE1, 1000)
+
+ZVALUE32_LL &lt;- abc(OBS, ZVALUE32, POSTVEC32, tol=0.1,method="loclinear")
+
+ZVALUE32_BT &lt;- sapply(ZVALUE32_LL$adj.values,backtrans_z)
+ZVALUE32_BT_mode &lt;- loc1stats(ZVALUE32_BT, prob=0.95)[1]
+ZVALUE32_BT_mode
+
+summary(ZVALUE32_BT)
+</code></pre>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
