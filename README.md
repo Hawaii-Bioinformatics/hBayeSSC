@@ -21,20 +21,20 @@ The table of observed summary statistics consists of columns with the following 
 
 | Column name | Description |
 | ----------- | ----------- |
-| species     | name of taxa |
+| species     | Name of taxa |
 | nsam        | number of samples to be simulated |
-| nsites      | number of base pairs |
+| nsites      | Number of base pairs |
 | tstv        | % transitions |
-| gamma       | gamma shape parameter |
-| gen         | numbers of years per generation |
-| locuslow    | low estimate of the locus mutation rate per generation |
-| locushigh   | high estimate of the locus mutation rate per generation |
-| Nelow       | low estimate for effective population size |
-| Nehigh      | high estimate for effective population size |
-| SegSites    | segregating sites |
-| nucdiv      | nucleotide diversity |
-| Haptypes    | number of haplotypes |
-| HapDiver    | haplotypic diversity |
+| gamma       | Gamma shape parameter |
+| gen         | Numbers of years per generation |
+| locuslow    | Low estimate of the locus mutation rate per generation |
+| locushigh   | High estimate of the locus mutation rate per generation |
+| Nelow       | Low estimate for effective population size |
+| Nehigh      | High estimate for effective population size |
+| SegSites    | Segregating sites |
+| nucdiv      | Nucleotide diversity |
+| Haptypes    | Number of haplotypes |
+| HapDiver    | Haplotypic diversity |
 | TajimasD    | Tajima's D |
 | F*          | Fu's F |
 
