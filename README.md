@@ -1,13 +1,16 @@
 hBayeSSC is a python script that wraps around serial simcoal in order to simulate a multi-taxa community undergoing a coordinated demographic expansion.
 
 ## Requirements
-The files needed to produce a set of simulations with multitaxa summary statistics for the hABC analysis described in Chan et al. 2014 are: 
- *  BayeSSC - The executable for Serial Simcoal which can be found here: [site](http://www.stanford.edu/group/hadlylab/ssc/)   
- *  python >= 2.4   
+The applications required to produce a set of simulations with multitaxa summary statistics for the hABC analysis described in Chan et al. 2014  
+ 
+ *  [BayeSSC - Serial Simcoal](http://www.stanford.edu/group/hadlylab/ssc/)   
+ *  [Python 2.x](https://www.python.org/) >= 2.4   
  *  hBayeSSC.py
- *  msReject (Optional) [Install Instructions](#msreject-module)
+ *  msReject (Optional) [Installation instructions](#msreject-module)
+
 
 ## Input files
+The input files needed to produce a set of simulations with multitaxa summary statistics for the hABC analysis described in Chan et al. 2014 
  *  A table of observed summary statistics for each taxon in the community. ([details](#observation-summary-statistics))
  *  An input par file for serial simcoal. ([details](#par-file))
 
@@ -17,23 +20,23 @@ The files needed to produce a set of simulations with multitaxa summary statisti
 The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values:
 
 | Column name | Description |
-| ----- | ----------- |
-| species | name of taxa |
-| nsam | number of samples to be simulated |
-| nsites | number of base pairs |
-| tstv  | % transitions |
-| gamma |  gamma shape parameter |
-| gen | numbers of years per generation |
-| locuslow | low estimate of the locus mutation rate per generation |
-| locushigh | high estimate of the locus mutation rate per generation |
-| Nelow | low estimate for effective population size |
-| Nehigh | high estimate for effective population size |
-| SegSites | segregating sites |
-| nucdiv | nucleotide diversity |
-| Haptypes | number of haplotypes |
-| HapDiver | haplotypic diversity |
-| TajimasD | Tajima's D |
-| F* | Fu's F |
+| ----------- | ----------- |
+| species     | name of taxa |
+| nsam        | number of samples to be simulated |
+| nsites      | number of base pairs |
+| tstv        | % transitions |
+| gamma       | gamma shape parameter |
+| gen         | numbers of years per generation |
+| locuslow    | low estimate of the locus mutation rate per generation |
+| locushigh   | high estimate of the locus mutation rate per generation |
+| Nelow       | low estimate for effective population size |
+| Nehigh      | high estimate for effective population size |
+| SegSites    | segregating sites |
+| nucdiv      | nucleotide diversity |
+| Haptypes    | number of haplotypes |
+| HapDiver    | haplotypic diversity |
+| TajimasD    | Tajima's D |
+| F*          | Fu's F |
 
 A more complete description of these values can be found on the [BayeSSC website](http://www.stanford.edu/group/hadlylab/ssc/)
 
