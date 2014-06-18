@@ -5,13 +5,15 @@ The files needed to produce a set of simulations with multitaxa summary statisti
  *  BayeSSC - The executable for Serial Simcoal which can be found here: [site](http://www.stanford.edu/group/hadlylab/ssc/)   
  *  python >= 2.4   
  *  hBayeSSC.py
- *  A table of observed summary statistics for each taxon in the community [example_obs](/example_data/example_obs) 
- *  An input par file for serial simcoal [example.par](/example_data/example.par) 
  *  msReject (Optional) [Install Instructions](#msreject-module)
 
-## Observation summary statistics format
-The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values.  A more complete
-description of these values can be found on the [BayeSSC website](http://www.stanford.edu/group/hadlylab/ssc/): 
+## Input files
+ *  A table of observed summary statistics for each taxon in the community [details](#observation-summary-statistics)
+ *  An input par file for serial simcoal [details](#par-file)
+
+### Observation summary statistics
+[example_obs](/example_data/example_obs) 
+The table of observed summary statistics consists of columns with the following header names.  hBayeSSC replaces the appropriate line in the par file with these values:
 
 | Column name | Description |
 | ----- | ----------- |
@@ -32,8 +34,11 @@ description of these values can be found on the [BayeSSC website](http://www.sta
 | TajimasD | Tajima's D |
 | F* | Fu's F |
 
-The par file contains one prior which is not individually replaced, such as expansion magnitude (under historical events) and will apply to all populations.
+A more complete description of these values can be found on the [BayeSSC website](http://www.stanford.edu/group/hadlylab/ssc/)
 
+### par file
+[example.par](/example_data/example.par) 
+The par file contains one prior which is not individually replaced, such as expansion magnitude (under historical events) and will apply to all populations.
 
 ## Usage
 
