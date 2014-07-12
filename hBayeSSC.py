@@ -339,7 +339,8 @@ class ParFile(object):
     This results in a messy parser, but it should work.
     """
     def __init__(self, inName):
-	infile = open(inName, "rU")
+        self.name = inName
+        infile = open(inName, "rU")
 	values = []
 	line = 0
 	for l in infile:
@@ -652,7 +653,23 @@ class Model(object):
         self.indx =  "%s_%s_%%s_%%%%s_%%s"%(self.options.uid, self.obsCnt)
         self.bayessc = bayessc
         self.timeGenerator = timegen
-		
+        self.setGroupA(par, True)
+        self.setGroupB(par, options.dualCon)
+        
+
+    def setGroupA(self, parfile, isCongruent):
+        if isCongruent:
+            self.groupA = [parfile, parfile.name, self.__generateCONSpecs]
+        else:
+            self.groupA = [parfile, parfile.name, self.__generateRANDSpecs]
+            
+    def setGroupB(self,  parfile, isCongruent):
+        if isCongruent:
+            self.groupB = [parfile, parfile.name, self.__generateCONSpecs]
+        else:
+            self.groupB = [parfile, parfile.name, self.__generateRANDSpecs]
+
+                                                              		
     def execute(self, modelNumber, hyperstatsOut = None, runDatOut = None):
         """
         a model describes how many observations make up the congruent group.  for instance, model0, means we have no congruent observations.
@@ -662,21 +679,24 @@ class Model(object):
         print >> sys.stderr , ".",
         indx_raw = self.indx%(modelNumber, "_".join([str(random.random()), str(time.time())]).replace(".","_"))
         for trial in xrange(int(self.options.repeats)):
-            conSpecs, randSpecs = self.splitter.split(self.observations, modelNumber)
+            groupAmembers, groupBmemebers = self.splitter.split(self.observations, modelNumber)
+            groupAData= []
+            groupBData= []
             outstr = []
-            conspecData= []
-            randomData= []
+
             indx = indx_raw%(trial)
-            if conSpecs:
-                rows = self.__generateCONSpecs(self.options.par, self.par, conSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
-                conspecData.extend(rows)
+            if groupAmembers:
+                rows = self.groupA[2](self.groupA[1], self.groupA[0], groupAmembers, self.options.trange, self.options.outdir, LPType = self.options.LPType)
+                #rows = self.__generateCONSpecs(self.options.par, self.par, conSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
+                groupAData.extend(rows)
                 outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
-            if randSpecs:
-                rows = self.__generateRANDSpecs(self.options.par, self.par, randSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
-                randomData.extend(rows)
+            if groupBmemebers:
+                rows = self.groupB[2](self.groupB[1], self.groupB[0], groupBmembers, self.options.trange, self.options.outdir, LPType = self.options.LPType)
+                #rows = self.__generateRANDSpecs(self.options.par, self.par, randSpecs, self.options.trange, self.options.outdir, LPType = self.options.LPType)
+                groupBData.extend(rows)
                 outstr.append( Model.FIELD_DELIM.join( map(str, rows) ) )
 
-	    print >> hyperstatsOut, Model.FIELD_DELIM.join( [indx] + computeStats(len(conSpecs), self.obsCnt, conspecData, randomData) )
+	    print >> hyperstatsOut, Model.FIELD_DELIM.join( [indx] + computeStats(len(groupAmembers), self.obsCnt, groupAData, groupBData) )
             if runDatOut:
                 print >> runDatOut, Model.FIELD_DELIM.join( [indx] + outstr)
 
@@ -831,7 +851,10 @@ def main_init(options, par):
     runData = None
     if not options.onlyHyperstats:
 	    runData = open(os.path.join(options.outdir, "run_data_iterations_%s.csv"%(options.repeats)), "w")
-    processor = Model(options, par, observations, obsCnt, ObservationSplitter("uniform"), TimeGenerator("uniform"), BayeSSC(options.bayesPath) )       
+    processor = Model(options, par, observations, obsCnt, ObservationSplitter("uniform"), TimeGenerator("uniform"), BayeSSC(options.bayesPath) )
+    if par2:
+        processor.setGroupB(par2, options.dualCon)
+
     if options.model == None:
 	for modelNum in xrange(obsCnt + 1):	    
 	    processor.execute(modelNum, hyperstats, runData)
@@ -907,7 +930,10 @@ def main():
     """
     options = commandlineArgs()
     par = ParFile(options.par)
+    par2 = None
     if options.mode == 'initial':
+        if options.par2:
+            par2 = ParFile(options.par2)
 	main_init(options, par)
     elif options.mode == 'posterior':
 	main_post(options, par)
@@ -963,6 +989,9 @@ def commandlineArgs():
 
 
     init_group = OptionGroup(parser, "Regular Run", "Options to be applied during mode 'initial'")
+
+    init_group.add_option("", "--par2", dest = "par2", help = "second par file template", action = "store", type = "string", metavar = "FILE")
+    init_group.add_option("", "--two_congruent", action="store_true", dest="dualCon", default=False, help="When set, will generate two congruent groups, instead of a congruent and random group.")
     
     init_group.add_option("-m", "--model", dest = "model", help = "Run a single model (0 to total entries in observation file) [default: run all models] ", action = "store", type = "int", metavar = "MODEL", default = None)
     init_group.add_option("-l", "--LPType", dest = "LPType", help = "Loci Rate Priori Type", action = "store", type = "choice", choices = ["U"], default = "U", metavar = "TYPE")
@@ -1023,6 +1052,8 @@ def commandlineArgs():
 
     if options.mode == 'initial':
 	options, args = mode_init(parser, options, args)
+        if options.dualCon and not options.par2:
+            parser.error("Two congruent option requires a second par file --par2")
     elif options.mode == 'posterior':
 	options, args = mode_post(parser, options, args)
     else:
