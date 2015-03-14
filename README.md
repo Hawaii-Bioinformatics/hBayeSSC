@@ -54,7 +54,7 @@ python hBayeSSC.py --mode initial -p example.par -i example_obs -r 200 -u full -
 
 This command will create the observed hyperstats file for the rejection analysis: 
 ```
-python hBayeSSC.py --mode initial -p example.par -i example_obs -r 200 -u full -b ./BayeSSC -t 1000:500000 --obs_hyperstats
+python hBayeSSC.py --mode initial -p example.par -i example_obs -r 200 -u full -b ./BayeSSC -t 1000:500000 --obs_stats
 ```
 
 ## Options
