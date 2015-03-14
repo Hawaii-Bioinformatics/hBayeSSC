@@ -132,6 +132,8 @@ POSTVEC32<- Prior32[,c(17:32)]
 MZ_OBS<- read.table("hyperstats_observations.txt", sep="\t", header = F)
 OBS<- MZ_OBS[,c(17:32)] 
 
+#load random set of 
+
 #########back transform function####################
 
 #replace 32 with the number of species
